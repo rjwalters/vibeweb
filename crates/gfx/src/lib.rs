@@ -39,13 +39,37 @@
 //!     renderer.draw_text(font.as_ab_glyph(), 16.0, 50.0, 100.0, "Hello, World!", Color::BLACK);
 //! }
 //! ```
+//!
+//! # CSS Border Rendering
+//!
+//! The crate supports CSS-style borders with different widths, colors, and
+//! styles per edge:
+//!
+//! ```
+//! use vw_gfx::{Border, BorderEdge, BorderStyle, Color, Framebuffer, Rect};
+//! use vw_gfx::border::draw_border;
+//!
+//! let mut fb = Framebuffer::new(800, 600);
+//!
+//! // Create a border with different colors per edge
+//! let border = Border {
+//!     top: BorderEdge::solid(2.0, Color::RED),
+//!     right: BorderEdge::dashed(2.0, Color::GREEN),
+//!     bottom: BorderEdge::dotted(2.0, Color::BLUE),
+//!     left: BorderEdge::double(4.0, Color::BLACK),
+//! };
+//!
+//! draw_border(&mut fb, Rect::new(10, 10, 100, 50), &border);
+//! ```
 
+pub mod border;
 pub mod color;
 pub mod display_list;
 pub mod framebuffer;
 pub mod rect;
 pub mod text;
 
+pub use border::{Border, BorderEdge, BorderStyle};
 pub use color::Color;
 pub use display_list::{BorderWidths, DisplayCommand, DisplayList};
 pub use framebuffer::Framebuffer;
