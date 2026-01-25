@@ -67,18 +67,19 @@ pub mod specificity;
 
 // CSS parsing modules (from PR #34)
 mod parser;
-mod selectors;
 mod tokenizer;
 mod values;
 
 // Re-export selector matching items
 pub use matching::{matches, matches_with_context, PseudoClassContext};
-pub use selector::{Combinator, CompoundSelector, Selector, TypeSelector};
+pub use selector::{
+    AttributeMatcher, AttributeSelector, Combinator, CompoundSelector, NthFormula, PseudoClass,
+    Selector, SelectorComponent, TypeSelector,
+};
 pub use specificity::Specificity;
 
 // Re-export CSS parsing items
 pub use parser::{parse, Declaration, Rule, Stylesheet};
-pub use selectors::{AttributeOp, AttributeSelector, SimpleSelector};
 pub use tokenizer::{Token, TokenKind, Tokenizer};
 pub use values::{Color, CssValue, Length, LengthUnit};
 
@@ -130,12 +131,13 @@ mod tests {
         let css = "div p { color: red; }";
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors.len(), 2);
-        assert_eq!(sel.combinators.len(), 1);
-        assert!(matches!(
-            sel.combinators[0],
-            selectors::Combinator::Descendant
-        ));
+        let compounds: Vec<_> = sel.compound_selectors().collect();
+        assert_eq!(compounds.len(), 2);
+        // Check that there's a descendant combinator
+        assert!(sel
+            .components
+            .iter()
+            .any(|c| matches!(c, SelectorComponent::Combinator(Combinator::Descendant))));
     }
 
     #[test]
@@ -143,8 +145,12 @@ mod tests {
         let css = "div > p { color: red; }";
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors.len(), 2);
-        assert!(matches!(sel.combinators[0], selectors::Combinator::Child));
+        let compounds: Vec<_> = sel.compound_selectors().collect();
+        assert_eq!(compounds.len(), 2);
+        assert!(sel
+            .components
+            .iter()
+            .any(|c| matches!(c, SelectorComponent::Combinator(Combinator::Child))));
     }
 
     #[test]
@@ -152,8 +158,9 @@ mod tests {
         let css = ".highlight { background: yellow; }";
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors[0].classes.len(), 1);
-        assert_eq!(sel.simple_selectors[0].classes[0], "highlight");
+        let compound = sel.compound_selectors().next().unwrap();
+        assert_eq!(compound.classes.len(), 1);
+        assert_eq!(compound.classes[0], "highlight");
     }
 
     #[test]
@@ -161,7 +168,8 @@ mod tests {
         let css = "#main { width: 960px; }";
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors[0].id, Some("main".to_string()));
+        let compound = sel.compound_selectors().next().unwrap();
+        assert_eq!(compound.id, Some("main".to_string()));
     }
 
     #[test]
@@ -169,10 +177,13 @@ mod tests {
         let css = "div.container#main { padding: 10px; }";
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        let simple = &sel.simple_selectors[0];
-        assert_eq!(simple.tag_name, Some("div".to_string()));
-        assert_eq!(simple.classes, vec!["container".to_string()]);
-        assert_eq!(simple.id, Some("main".to_string()));
+        let compound = sel.compound_selectors().next().unwrap();
+        assert_eq!(
+            compound.type_selector,
+            Some(TypeSelector::Tag("div".to_string()))
+        );
+        assert_eq!(compound.classes, vec!["container".to_string()]);
+        assert_eq!(compound.id, Some("main".to_string()));
     }
 
     #[test]
@@ -248,7 +259,8 @@ mod tests {
         let css = "* { margin: 0; }";
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        assert!(sel.simple_selectors[0].universal);
+        let compound = sel.compound_selectors().next().unwrap();
+        assert_eq!(compound.type_selector, Some(TypeSelector::Universal));
     }
 
     #[test]
@@ -256,7 +268,8 @@ mod tests {
         let css = "[disabled] { opacity: 0.5; }";
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors[0].attributes.len(), 1);
+        let compound = sel.compound_selectors().next().unwrap();
+        assert_eq!(compound.attributes.len(), 1);
     }
 
     #[test]
@@ -264,9 +277,13 @@ mod tests {
         let css = r#"[type="text"] { border: 1px solid; }"#;
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        let attr = &sel.simple_selectors[0].attributes[0];
+        let compound = sel.compound_selectors().next().unwrap();
+        let attr = &compound.attributes[0];
         assert_eq!(attr.name, "type");
-        assert_eq!(attr.value, Some("text".to_string()));
+        assert!(matches!(
+            &attr.matcher,
+            Some(AttributeMatcher::Exact(v)) if v == "text"
+        ));
     }
 
     #[test]
@@ -274,9 +291,10 @@ mod tests {
         let css = "a:hover { color: blue; }";
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(
-            sel.simple_selectors[0].pseudo_classes,
-            vec!["hover".to_string()]
-        );
+        let compound = sel.compound_selectors().next().unwrap();
+        assert!(compound
+            .pseudo_classes
+            .iter()
+            .any(|pc| matches!(pc, PseudoClass::Hover)));
     }
 }

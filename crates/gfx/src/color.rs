@@ -1,7 +1,12 @@
 //! Color type for graphics rendering
+//!
+//! This is the canonical Color type used throughout the browser. All crates
+//! should use this type for color values to ensure consistency.
+
+use std::fmt;
 
 /// A 32-bit RGBA color
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color {
     /// Red component (0-255)
     pub r: u8,
@@ -85,6 +90,51 @@ impl Color {
             r: ((argb >> 16) & 0xFF) as u8,
             g: ((argb >> 8) & 0xFF) as u8,
             b: (argb & 0xFF) as u8,
+        }
+    }
+
+    /// Create an opaque color from a hex value (e.g., 0xFF0000 for red).
+    ///
+    /// This is useful for CSS-style hex colors without alpha.
+    pub const fn from_hex(hex: u32) -> Self {
+        Self {
+            r: ((hex >> 16) & 0xFF) as u8,
+            g: ((hex >> 8) & 0xFF) as u8,
+            b: (hex & 0xFF) as u8,
+            a: 255,
+        }
+    }
+
+    /// Check if this color is fully transparent.
+    pub const fn is_transparent(&self) -> bool {
+        self.a == 0
+    }
+
+    /// Create a new color from RGBA components (alias for `new`)
+    pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+}
+
+impl Default for Color {
+    fn default() -> Self {
+        Color::BLACK
+    }
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.a == 255 {
+            write!(f, "#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
+        } else {
+            write!(
+                f,
+                "rgba({}, {}, {}, {:.2})",
+                self.r,
+                self.g,
+                self.b,
+                self.a as f32 / 255.0
+            )
         }
     }
 }

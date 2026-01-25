@@ -264,10 +264,12 @@ mod tests {
 
     #[test]
     fn test_inheritance() {
-        let mut parent = ComputedStyle::default();
-        parent.color = Color::rgb(255, 0, 0);
-        parent.font_size = 20.0;
-        parent.font_family = vec!["Arial".to_string()];
+        let parent = ComputedStyle {
+            color: Color::rgb(255, 0, 0),
+            font_size: 20.0,
+            font_family: vec!["Arial".to_string()],
+            ..ComputedStyle::default()
+        };
 
         let child = ComputedStyle::inherit_from(&parent);
 

@@ -245,92 +245,9 @@ impl Sides<LengthOrAuto> {
     }
 }
 
-/// An RGBA color value.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
-}
-
-impl Default for Color {
-    fn default() -> Self {
-        // Default to black
-        Color::BLACK
-    }
-}
-
-impl Color {
-    /// Fully transparent.
-    pub const TRANSPARENT: Color = Color {
-        r: 0,
-        g: 0,
-        b: 0,
-        a: 0,
-    };
-    /// Black.
-    pub const BLACK: Color = Color {
-        r: 0,
-        g: 0,
-        b: 0,
-        a: 255,
-    };
-    /// White.
-    pub const WHITE: Color = Color {
-        r: 255,
-        g: 255,
-        b: 255,
-        a: 255,
-    };
-
-    /// Create a new color from RGB values (fully opaque).
-    pub fn rgb(r: u8, g: u8, b: u8) -> Self {
-        Color { r, g, b, a: 255 }
-    }
-
-    /// Create a new color from RGBA values.
-    pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Color { r, g, b, a }
-    }
-
-    /// Create a color from a hex value (e.g., 0xFF0000 for red).
-    pub fn from_hex(hex: u32) -> Self {
-        Color {
-            r: ((hex >> 16) & 0xFF) as u8,
-            g: ((hex >> 8) & 0xFF) as u8,
-            b: (hex & 0xFF) as u8,
-            a: 255,
-        }
-    }
-
-    /// Check if this color is fully transparent.
-    pub fn is_transparent(&self) -> bool {
-        self.a == 0
-    }
-
-    /// Convert to a 32-bit RGBA value.
-    pub fn to_rgba32(&self) -> u32 {
-        ((self.r as u32) << 24) | ((self.g as u32) << 16) | ((self.b as u32) << 8) | (self.a as u32)
-    }
-}
-
-impl fmt::Display for Color {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.a == 255 {
-            write!(f, "#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
-        } else {
-            write!(
-                f,
-                "rgba({}, {}, {}, {})",
-                self.r,
-                self.g,
-                self.b,
-                self.a as f32 / 255.0
-            )
-        }
-    }
-}
+// Re-export Color from vw_gfx to consolidate the type system.
+// This ensures all crates use the same Color type for rendering.
+pub use vw_gfx::color::Color;
 
 #[cfg(test)]
 mod tests {

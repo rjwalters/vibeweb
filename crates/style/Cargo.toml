@@ -5,3 +5,5 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+vw-css = { path = "../css" }
+vw-gfx = { path = "../gfx" }

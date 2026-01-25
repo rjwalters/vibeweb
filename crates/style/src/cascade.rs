@@ -26,68 +26,8 @@ pub enum Origin {
     Author = 2,
 }
 
-/// CSS selector specificity.
-///
-/// Specificity is calculated as (a, b, c) where:
-/// - a = number of ID selectors
-/// - b = number of class selectors, attribute selectors, and pseudo-classes
-/// - c = number of type selectors and pseudo-elements
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct Specificity {
-    /// Number of ID selectors.
-    pub ids: u16,
-    /// Number of class selectors, attribute selectors, and pseudo-classes.
-    pub classes: u16,
-    /// Number of type selectors and pseudo-elements.
-    pub elements: u16,
-}
-
-impl Specificity {
-    /// Create a new specificity value.
-    pub fn new(ids: u16, classes: u16, elements: u16) -> Self {
-        Specificity {
-            ids,
-            classes,
-            elements,
-        }
-    }
-
-    /// Specificity for inline styles (highest priority).
-    pub fn inline() -> Self {
-        // Inline styles win over all selectors
-        Specificity {
-            ids: u16::MAX,
-            classes: 0,
-            elements: 0,
-        }
-    }
-
-    /// Zero specificity (lowest priority).
-    pub fn zero() -> Self {
-        Specificity {
-            ids: 0,
-            classes: 0,
-            elements: 0,
-        }
-    }
-
-    /// Convert to a single numeric value for comparison.
-    pub fn to_numeric(&self) -> u64 {
-        ((self.ids as u64) << 32) | ((self.classes as u64) << 16) | (self.elements as u64)
-    }
-}
-
-impl PartialOrd for Specificity {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Specificity {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.to_numeric().cmp(&other.to_numeric())
-    }
-}
+// Re-export Specificity from vw_css to consolidate the type system
+pub use vw_css::Specificity;
 
 /// A CSS property identifier.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -864,9 +804,11 @@ mod tests {
 
     #[test]
     fn test_cascade_inheritance() {
-        let mut parent = ComputedStyle::default();
-        parent.color = Color::rgb(255, 0, 0);
-        parent.font_size = 20.0;
+        let parent = ComputedStyle {
+            color: Color::rgb(255, 0, 0),
+            font_size: 20.0,
+            ..ComputedStyle::default()
+        };
 
         let cascade = Cascade::new();
         let style = cascade.compute(Some(&parent));
@@ -891,8 +833,10 @@ mod tests {
             0,
         ));
 
-        let mut parent = ComputedStyle::default();
-        parent.background_color = Color::rgb(0, 255, 0);
+        let parent = ComputedStyle {
+            background_color: Color::rgb(0, 255, 0),
+            ..ComputedStyle::default()
+        };
 
         let _style = cascade.compute(Some(&parent));
         // Background color doesn't inherit by default, but with explicit inherit it should
