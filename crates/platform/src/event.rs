@@ -252,3 +252,188 @@ pub enum Event {
         character: char,
     },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mouse_button_equality() {
+        assert_eq!(MouseButton::Left, MouseButton::Left);
+        assert_eq!(MouseButton::Right, MouseButton::Right);
+        assert_eq!(MouseButton::Middle, MouseButton::Middle);
+        assert_eq!(MouseButton::Other(4), MouseButton::Other(4));
+        assert_ne!(MouseButton::Left, MouseButton::Right);
+        assert_ne!(MouseButton::Other(4), MouseButton::Other(5));
+    }
+
+    #[test]
+    fn element_state_equality() {
+        assert_eq!(ElementState::Pressed, ElementState::Pressed);
+        assert_eq!(ElementState::Released, ElementState::Released);
+        assert_ne!(ElementState::Pressed, ElementState::Released);
+    }
+
+    #[test]
+    fn modifiers_default() {
+        let mods = Modifiers::default();
+        assert!(!mods.shift);
+        assert!(!mods.ctrl);
+        assert!(!mods.alt);
+    }
+
+    #[test]
+    fn modifiers_with_keys() {
+        let mods = Modifiers {
+            shift: true,
+            ctrl: false,
+            alt: true,
+        };
+        assert!(mods.shift);
+        assert!(!mods.ctrl);
+        assert!(mods.alt);
+    }
+
+    #[test]
+    fn event_mouse_moved() {
+        let event = Event::MouseMoved { x: 100.5, y: 200.5 };
+        if let Event::MouseMoved { x, y } = event {
+            assert!((x - 100.5).abs() < f64::EPSILON);
+            assert!((y - 200.5).abs() < f64::EPSILON);
+        } else {
+            panic!("Expected MouseMoved event");
+        }
+    }
+
+    #[test]
+    fn event_mouse_button() {
+        let event = Event::MouseButton {
+            button: MouseButton::Left,
+            state: ElementState::Pressed,
+            x: 50.0,
+            y: 75.0,
+        };
+        if let Event::MouseButton {
+            button,
+            state,
+            x,
+            y,
+        } = event
+        {
+            assert_eq!(button, MouseButton::Left);
+            assert_eq!(state, ElementState::Pressed);
+            assert!((x - 50.0).abs() < f64::EPSILON);
+            assert!((y - 75.0).abs() < f64::EPSILON);
+        } else {
+            panic!("Expected MouseButton event");
+        }
+    }
+
+    #[test]
+    fn event_mouse_wheel() {
+        let event = Event::MouseWheel {
+            delta_x: -10.0,
+            delta_y: 20.0,
+        };
+        if let Event::MouseWheel { delta_x, delta_y } = event {
+            assert!((delta_x - (-10.0)).abs() < f64::EPSILON);
+            assert!((delta_y - 20.0).abs() < f64::EPSILON);
+        } else {
+            panic!("Expected MouseWheel event");
+        }
+    }
+
+    #[test]
+    fn event_keyboard_input() {
+        let event = Event::KeyboardInput {
+            key: KeyCode::KeyA,
+            state: ElementState::Pressed,
+            modifiers: Modifiers {
+                shift: true,
+                ctrl: false,
+                alt: false,
+            },
+        };
+        if let Event::KeyboardInput {
+            key,
+            state,
+            modifiers,
+        } = event
+        {
+            assert_eq!(key, KeyCode::KeyA);
+            assert_eq!(state, ElementState::Pressed);
+            assert!(modifiers.shift);
+            assert!(!modifiers.ctrl);
+        } else {
+            panic!("Expected KeyboardInput event");
+        }
+    }
+
+    #[test]
+    fn event_character_input() {
+        let event = Event::CharacterInput { character: 'A' };
+        if let Event::CharacterInput { character } = event {
+            assert_eq!(character, 'A');
+        } else {
+            panic!("Expected CharacterInput event");
+        }
+    }
+
+    #[test]
+    fn event_clone() {
+        let event = Event::MouseMoved { x: 1.0, y: 2.0 };
+        let cloned = event.clone();
+        assert_eq!(event, cloned);
+    }
+
+    #[test]
+    fn keycode_navigation_keys() {
+        // Verify navigation keys are distinct
+        let keys = [
+            KeyCode::ArrowUp,
+            KeyCode::ArrowDown,
+            KeyCode::ArrowLeft,
+            KeyCode::ArrowRight,
+            KeyCode::Home,
+            KeyCode::End,
+            KeyCode::PageUp,
+            KeyCode::PageDown,
+        ];
+        for (i, key1) in keys.iter().enumerate() {
+            for (j, key2) in keys.iter().enumerate() {
+                if i == j {
+                    assert_eq!(key1, key2);
+                } else {
+                    assert_ne!(key1, key2);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn keycode_editing_keys() {
+        assert_eq!(KeyCode::Backspace, KeyCode::Backspace);
+        assert_eq!(KeyCode::Delete, KeyCode::Delete);
+        assert_eq!(KeyCode::Enter, KeyCode::Enter);
+        assert_eq!(KeyCode::Tab, KeyCode::Tab);
+        assert_eq!(KeyCode::Escape, KeyCode::Escape);
+        assert_ne!(KeyCode::Backspace, KeyCode::Delete);
+    }
+
+    #[test]
+    fn window_lifecycle_events() {
+        let redraw = Event::Redraw;
+        let resize = Event::Resize {
+            width: 800,
+            height: 600,
+        };
+        let close = Event::CloseRequested;
+
+        assert_eq!(redraw, Event::Redraw);
+        if let Event::Resize { width, height } = resize {
+            assert_eq!(width, 800);
+            assert_eq!(height, 600);
+        }
+        assert_eq!(close, Event::CloseRequested);
+    }
+}
