@@ -152,8 +152,8 @@ pub fn layout_with_fonts<F: FontMetrics>(
 fn layout_box_recursive<F: FontMetrics>(
     layout_box: &mut LayoutBox,
     containing_block: &Dimensions,
-    _fonts: &F,
-    _font_size: f32,
+    fonts: &F,
+    font_size: f32,
 ) {
     match layout_box.box_type {
         BoxType::Block | BoxType::Anonymous => {
