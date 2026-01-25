@@ -47,9 +47,24 @@ impl RenderTree {
     /// Paint this render tree into a framebuffer.
     ///
     /// This walks the layout tree and paints each box's background
-    /// and content into the framebuffer.
+    /// and content into the framebuffer at scroll position (0, 0).
     pub fn paint(&self, fb: &mut Framebuffer) {
-        crate::paint::paint_render_tree(self, fb);
+        crate::paint::paint_render_tree(self, fb, 0.0, 0.0);
+    }
+
+    /// Paint this render tree into a framebuffer with scroll offset.
+    ///
+    /// This walks the layout tree and paints each box's background
+    /// and content into the framebuffer, translating coordinates by
+    /// the scroll offset.
+    ///
+    /// # Arguments
+    ///
+    /// * `fb` - The framebuffer to paint into
+    /// * `scroll_x` - Horizontal scroll offset (content is shifted left by this amount)
+    /// * `scroll_y` - Vertical scroll offset (content is shifted up by this amount)
+    pub fn paint_with_scroll(&self, fb: &mut Framebuffer, scroll_x: f32, scroll_y: f32) {
+        crate::paint::paint_render_tree(self, fb, scroll_x, scroll_y);
     }
 }
 

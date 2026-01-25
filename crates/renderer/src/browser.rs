@@ -38,6 +38,10 @@ pub struct Browser {
     viewport: Viewport,
     /// Cached render tree (invalidated on viewport change or DOM mutation).
     render_tree: Option<RenderTree>,
+    /// Horizontal scroll offset in document coordinates.
+    scroll_x: f32,
+    /// Vertical scroll offset in document coordinates.
+    scroll_y: f32,
 }
 
 impl Browser {
@@ -61,6 +65,8 @@ impl Browser {
             document,
             viewport,
             render_tree: None,
+            scroll_x: 0.0,
+            scroll_y: 0.0,
         })
     }
 
@@ -87,6 +93,86 @@ impl Browser {
         self.render_tree = None;
     }
 
+    /// Update scroll position from wheel delta.
+    ///
+    /// The scroll position is clamped to valid bounds based on content size.
+    /// Positive delta_y scrolls content up (document moves up, revealing content below).
+    ///
+    /// # Arguments
+    ///
+    /// * `delta_x` - Horizontal scroll delta (positive = scroll right)
+    /// * `delta_y` - Vertical scroll delta (positive = scroll down)
+    pub fn scroll(&mut self, delta_x: f32, delta_y: f32) {
+        // Get content height for clamping
+        let content_height = self.content_height();
+        let viewport_height = self.viewport.height() as f32;
+        let max_scroll_y = (content_height - viewport_height).max(0.0);
+
+        // Get content width for clamping (future: when horizontal overflow is supported)
+        let content_width = self.content_width();
+        let viewport_width = self.viewport.width() as f32;
+        let max_scroll_x = (content_width - viewport_width).max(0.0);
+
+        // Apply deltas and clamp
+        self.scroll_y = (self.scroll_y + delta_y).clamp(0.0, max_scroll_y);
+        self.scroll_x = (self.scroll_x + delta_x).clamp(0.0, max_scroll_x);
+    }
+
+    /// Get current scroll position.
+    ///
+    /// Returns the (x, y) scroll offset in document coordinates.
+    pub fn scroll_position(&self) -> (f32, f32) {
+        (self.scroll_x, self.scroll_y)
+    }
+
+    /// Set scroll position directly.
+    ///
+    /// This is useful for restoring scroll position from navigation history.
+    /// The position is clamped to valid bounds.
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - Horizontal scroll offset
+    /// * `y` - Vertical scroll offset
+    pub fn set_scroll_position(&mut self, x: f32, y: f32) {
+        // Get bounds for clamping
+        let content_height = self.content_height();
+        let viewport_height = self.viewport.height() as f32;
+        let max_scroll_y = (content_height - viewport_height).max(0.0);
+
+        let content_width = self.content_width();
+        let viewport_width = self.viewport.width() as f32;
+        let max_scroll_x = (content_width - viewport_width).max(0.0);
+
+        // Clamp to valid bounds
+        self.scroll_x = x.clamp(0.0, max_scroll_x);
+        self.scroll_y = y.clamp(0.0, max_scroll_y);
+    }
+
+    /// Compute total content height from the render tree.
+    ///
+    /// Returns the bottom edge of the root layout box's border box,
+    /// which represents the total document height.
+    fn content_height(&self) -> f32 {
+        self.render_tree
+            .as_ref()
+            .and_then(|tree| tree.root())
+            .map(|root| root.border_box().bottom())
+            .unwrap_or(0.0)
+    }
+
+    /// Compute total content width from the render tree.
+    ///
+    /// Returns the right edge of the root layout box's border box,
+    /// which represents the total document width.
+    fn content_width(&self) -> f32 {
+        self.render_tree
+            .as_ref()
+            .and_then(|tree| tree.root())
+            .map(|root| root.border_box().right())
+            .unwrap_or(0.0)
+    }
+
     /// Ensure the render tree is up to date.
     ///
     /// This performs layout if the render tree has been invalidated.
@@ -98,7 +184,8 @@ impl Browser {
 
     /// Paint the current document into a framebuffer.
     ///
-    /// This ensures the render tree is up to date, then paints it.
+    /// This ensures the render tree is up to date, then paints it
+    /// with the current scroll offset applied.
     pub fn paint(&mut self, fb: &mut Framebuffer) {
         // Ensure framebuffer matches viewport
         if fb.width() != self.viewport.width() || fb.height() != self.viewport.height() {
@@ -108,9 +195,9 @@ impl Browser {
         // Ensure layout is computed
         self.ensure_render_tree();
 
-        // Paint the render tree
+        // Paint the render tree with scroll offset
         if let Some(ref tree) = self.render_tree {
-            tree.paint(fb);
+            tree.paint_with_scroll(fb, self.scroll_x, self.scroll_y);
         }
     }
 
@@ -131,6 +218,8 @@ impl std::fmt::Debug for Browser {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Browser")
             .field("viewport", &self.viewport)
+            .field("scroll_x", &self.scroll_x)
+            .field("scroll_y", &self.scroll_y)
             .field("has_render_tree", &self.render_tree.is_some())
             .finish()
     }
@@ -203,6 +292,91 @@ mod tests {
 
         // Resize to same size should not invalidate
         browser.resize(800, 600);
+        assert!(browser.render_tree().is_some());
+    }
+
+    #[test]
+    fn test_scroll_initial_position() {
+        let browser = Browser::new("<html><body>Test</body></html>", "", 800, 600).unwrap();
+
+        // Initial scroll position should be (0, 0)
+        assert_eq!(browser.scroll_position(), (0.0, 0.0));
+    }
+
+    #[test]
+    fn test_scroll_updates_position() {
+        let mut browser = Browser::new("<html><body>Test</body></html>", "", 800, 600).unwrap();
+        let mut fb = Framebuffer::new(800, 600);
+
+        // Paint to compute render tree (needed for content height)
+        browser.paint(&mut fb);
+
+        // Scroll by some delta
+        browser.scroll(10.0, 20.0);
+
+        // Position should be clamped at 0 since content doesn't exceed viewport
+        // (content height is 0 with minimal document)
+        let (x, y) = browser.scroll_position();
+        assert_eq!(x, 0.0);
+        assert_eq!(y, 0.0);
+    }
+
+    #[test]
+    fn test_scroll_clamps_to_zero() {
+        let mut browser = Browser::new("<html><body>Test</body></html>", "", 800, 600).unwrap();
+        let mut fb = Framebuffer::new(800, 600);
+
+        browser.paint(&mut fb);
+
+        // Try to scroll to negative position
+        browser.scroll(-100.0, -100.0);
+
+        // Should be clamped to (0, 0)
+        assert_eq!(browser.scroll_position(), (0.0, 0.0));
+    }
+
+    #[test]
+    fn test_set_scroll_position() {
+        let mut browser = Browser::new("<html><body>Test</body></html>", "", 800, 600).unwrap();
+        let mut fb = Framebuffer::new(800, 600);
+
+        browser.paint(&mut fb);
+
+        // Set scroll position directly
+        browser.set_scroll_position(50.0, 100.0);
+
+        // Should be clamped (content doesn't exceed viewport)
+        let (x, y) = browser.scroll_position();
+        assert_eq!(x, 0.0);
+        assert_eq!(y, 0.0);
+    }
+
+    #[test]
+    fn test_set_scroll_position_clamps_negative() {
+        let mut browser = Browser::new("<html><body>Test</body></html>", "", 800, 600).unwrap();
+        let mut fb = Framebuffer::new(800, 600);
+
+        browser.paint(&mut fb);
+
+        // Try to set negative scroll position
+        browser.set_scroll_position(-50.0, -100.0);
+
+        // Should be clamped to (0, 0)
+        assert_eq!(browser.scroll_position(), (0.0, 0.0));
+    }
+
+    #[test]
+    fn test_paint_with_scroll() {
+        let mut browser = Browser::new("<html><body>Test</body></html>", "", 800, 600).unwrap();
+        let mut fb = Framebuffer::new(800, 600);
+
+        // First paint
+        browser.paint(&mut fb);
+
+        // Scroll and repaint (should not panic)
+        browser.scroll(0.0, 50.0);
+        browser.paint(&mut fb);
+
         assert!(browser.render_tree().is_some());
     }
 }
