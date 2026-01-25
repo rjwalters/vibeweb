@@ -6,3 +6,5 @@ license.workspace = true
 
 [dependencies]
 vw-image = { path = "../image" }
+vw-fonts = { path = "../fonts" }
+ab_glyph = "0.2"

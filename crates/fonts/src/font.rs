@@ -112,6 +112,14 @@ impl Font {
         // Glyph ID 0 is typically the .notdef glyph (missing glyph)
         glyph_id.0 != 0
     }
+
+    /// Get access to the underlying ab_glyph font for rasterization.
+    ///
+    /// This is used by the graphics crate for text rendering.
+    /// The returned reference implements `ab_glyph::Font`.
+    pub fn as_ab_glyph(&self) -> &FontArc {
+        &self.inner
+    }
 }
 
 impl std::fmt::Debug for Font {
