@@ -141,8 +141,14 @@ impl PartialEq for DisplayCommand {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (
-                DisplayCommand::SolidColor { rect: r1, color: c1 },
-                DisplayCommand::SolidColor { rect: r2, color: c2 },
+                DisplayCommand::SolidColor {
+                    rect: r1,
+                    color: c1,
+                },
+                DisplayCommand::SolidColor {
+                    rect: r2,
+                    color: c2,
+                },
             ) => r1 == r2 && c1 == c2,
             (
                 DisplayCommand::Border {
