@@ -4,9 +4,19 @@
 //! the vibeweb browser. It uses an arena-based allocation strategy where
 //! nodes are stored in a vector and referenced by indices, avoiding the
 //! complexity of Rc<RefCell<Node>> patterns.
+//!
+//! # Event Propagation
+//!
+//! The `events` module provides DOM event handling infrastructure:
+//! - Hit testing (finding elements at screen coordinates)
+//! - Event propagation with bubbling
+//! - Focus management for keyboard events
+//!
+//! See [`events`] module for details.
 
 mod debug;
 mod document;
+pub mod events;
 mod node;
 mod traverse;
 
