@@ -32,9 +32,20 @@ impl Specificity {
         }
     }
 
-    /// Returns a specificity of zero.
+    /// Returns a specificity of zero (lowest priority).
     pub fn zero() -> Self {
         Self::default()
+    }
+
+    /// Returns specificity for inline styles (highest priority).
+    ///
+    /// Inline styles always win over all selector-based styles.
+    pub fn inline() -> Self {
+        Self {
+            ids: u32::MAX,
+            classes: 0,
+            elements: 0,
+        }
     }
 
     /// Adds another specificity to this one.

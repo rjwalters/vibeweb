@@ -157,11 +157,10 @@ fn match_combinator<C: PseudoClassContext>(
             for ancestor in document.ancestors(element) {
                 // Only try element nodes
                 if let Some(node) = document.get(ancestor) {
-                    if node.is_element() {
-                        if matches_from_index(components, target_index, ancestor, document, context)
-                        {
-                            return true;
-                        }
+                    if node.is_element()
+                        && matches_from_index(components, target_index, ancestor, document, context)
+                    {
+                        return true;
                     }
                 }
             }
@@ -218,16 +217,16 @@ fn match_combinator<C: PseudoClassContext>(
                 let mut current = node.prev_sibling;
                 while let Some(sib_id) = current {
                     if let Some(sib_node) = document.get(sib_id) {
-                        if sib_node.is_element() {
-                            if matches_from_index(
+                        if sib_node.is_element()
+                            && matches_from_index(
                                 components,
                                 target_index,
                                 sib_id,
                                 document,
                                 context,
-                            ) {
-                                return true;
-                            }
+                            )
+                        {
+                            return true;
                         }
                         current = sib_node.prev_sibling;
                     } else {

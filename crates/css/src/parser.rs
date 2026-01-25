@@ -3,7 +3,10 @@
 //! Recursive descent parser that produces a Stylesheet from CSS text.
 //! This is a simplified parser focused on common CSS patterns.
 
-use crate::selectors::{AttributeOp, AttributeSelector, Combinator, Selector, SimpleSelector};
+use crate::selector::{
+    AttributeMatcher, AttributeSelector, Combinator, CompoundSelector, PseudoClass, Selector,
+    SelectorComponent, TypeSelector,
+};
 use crate::tokenizer::{Token, TokenKind, Tokenizer};
 use crate::values::{Color, CssValue, Length, LengthUnit};
 
@@ -255,9 +258,9 @@ impl Parser {
         }
     }
 
-    /// Parse a single selector (chain of simple selectors)
+    /// Parse a single selector (chain of compound selectors)
     fn parse_selector(&mut self) -> Option<Selector> {
-        let mut selector = Selector::new();
+        let mut components: Vec<SelectorComponent> = Vec::new();
 
         loop {
             self.skip_whitespace();
@@ -276,7 +279,7 @@ impl Parser {
                     self.advance();
                     Some(Combinator::GeneralSibling)
                 }
-                _ if !selector.simple_selectors.is_empty() => {
+                _ if !components.is_empty() => {
                     // Implicit descendant combinator if we already have selectors
                     Some(Combinator::Descendant)
                 }
@@ -291,90 +294,206 @@ impl Parser {
                 _ => {}
             }
 
-            // Parse simple selector
-            if let Some(simple) = self.parse_simple_selector() {
-                selector.add(combinator, simple);
+            // Parse compound selector
+            if let Some(compound) = self.parse_compound_selector() {
+                // Add combinator if this isn't the first compound selector
+                if let Some(comb) = combinator {
+                    if !components.is_empty() {
+                        components.push(SelectorComponent::Combinator(comb));
+                    }
+                }
+                components.push(SelectorComponent::Compound(compound));
             } else {
                 break;
             }
         }
 
-        if selector.simple_selectors.is_empty() {
+        if components.is_empty() {
             None
         } else {
-            Some(selector)
+            Some(Selector::new(components))
         }
     }
 
-    /// Parse a simple selector
-    fn parse_simple_selector(&mut self) -> Option<SimpleSelector> {
-        let mut simple = SimpleSelector::new();
+    /// Parse a compound selector (sequence of simple selectors without combinators)
+    fn parse_compound_selector(&mut self) -> Option<CompoundSelector> {
+        let mut compound = CompoundSelector::new();
 
         loop {
             match self.peek() {
                 TokenKind::Asterisk => {
                     self.advance();
-                    simple.universal = true;
+                    compound.type_selector = Some(TypeSelector::Universal);
                 }
                 TokenKind::Ident(name) => {
                     let name = name.clone();
                     self.advance();
-                    simple.tag_name = Some(name.to_lowercase());
+                    compound.type_selector = Some(TypeSelector::Tag(name.to_lowercase()));
                 }
                 TokenKind::Hash(name) => {
                     let name = name.clone();
                     self.advance();
-                    simple.id = Some(name);
+                    compound.id = Some(name);
                 }
                 TokenKind::Period => {
                     self.advance();
                     if let TokenKind::Ident(name) = self.peek().clone() {
                         self.advance();
-                        simple.classes.push(name);
+                        compound.classes.push(name);
                     }
                 }
                 TokenKind::LeftBracket => {
                     if let Some(attr) = self.parse_attribute_selector() {
-                        simple.attributes.push(attr);
+                        compound.attributes.push(attr);
                     }
                 }
                 TokenKind::Colon => {
                     self.advance();
-                    // Check for :: (pseudo-element)
+                    // Check for :: (pseudo-element) - skip for now as they're not in CompoundSelector
                     if matches!(self.peek(), TokenKind::Colon) {
                         self.advance();
-                        if let TokenKind::Ident(name) = self.peek().clone() {
+                        if let TokenKind::Ident(_) = self.peek().clone() {
                             self.advance();
-                            simple.pseudo_elements.push(name);
+                            // Pseudo-elements not supported in CompoundSelector yet
                         }
                     } else if let TokenKind::Ident(name) = self.peek().clone() {
                         self.advance();
                         // Handle pseudo-classes with functions like :nth-child(n)
-                        if matches!(self.peek(), TokenKind::LeftParen) {
+                        let pseudo = if matches!(self.peek(), TokenKind::LeftParen) {
                             self.advance();
-                            // Skip function arguments for now
-                            let mut paren_depth = 1;
-                            while paren_depth > 0 {
-                                match self.advance() {
-                                    TokenKind::LeftParen => paren_depth += 1,
-                                    TokenKind::RightParen => paren_depth -= 1,
-                                    TokenKind::Eof => break,
-                                    _ => {}
-                                }
-                            }
+                            let pc = self.parse_pseudo_class_with_args(&name);
+                            self.expect(&TokenKind::RightParen);
+                            pc
+                        } else {
+                            self.parse_pseudo_class(&name)
+                        };
+                        if let Some(pc) = pseudo {
+                            compound.pseudo_classes.push(pc);
                         }
-                        simple.pseudo_classes.push(name);
                     }
                 }
                 _ => break,
             }
         }
 
-        if simple.is_empty() {
+        if compound.type_selector.is_none()
+            && compound.id.is_none()
+            && compound.classes.is_empty()
+            && compound.attributes.is_empty()
+            && compound.pseudo_classes.is_empty()
+        {
             None
         } else {
-            Some(simple)
+            Some(compound)
         }
+    }
+
+    /// Parse a pseudo-class by name (without arguments)
+    fn parse_pseudo_class(&self, name: &str) -> Option<PseudoClass> {
+        match name.to_lowercase().as_str() {
+            "hover" => Some(PseudoClass::Hover),
+            "active" => Some(PseudoClass::Active),
+            "focus" => Some(PseudoClass::Focus),
+            "visited" => Some(PseudoClass::Visited),
+            "link" => Some(PseudoClass::Link),
+            "first-child" => Some(PseudoClass::FirstChild),
+            "last-child" => Some(PseudoClass::LastChild),
+            "only-child" => Some(PseudoClass::OnlyChild),
+            "first-of-type" => Some(PseudoClass::FirstOfType),
+            "last-of-type" => Some(PseudoClass::LastOfType),
+            "only-of-type" => Some(PseudoClass::OnlyOfType),
+            "empty" => Some(PseudoClass::Empty),
+            "root" => Some(PseudoClass::Root),
+            "enabled" => Some(PseudoClass::Enabled),
+            "disabled" => Some(PseudoClass::Disabled),
+            "checked" => Some(PseudoClass::Checked),
+            _ => None, // Unknown pseudo-class
+        }
+    }
+
+    /// Parse a pseudo-class with function arguments (e.g., :nth-child(2n+1))
+    fn parse_pseudo_class_with_args(&mut self, name: &str) -> Option<PseudoClass> {
+        match name.to_lowercase().as_str() {
+            "nth-child" => {
+                let formula = self.parse_nth_formula();
+                Some(PseudoClass::NthChild(formula))
+            }
+            "nth-last-child" => {
+                let formula = self.parse_nth_formula();
+                Some(PseudoClass::NthLastChild(formula))
+            }
+            "nth-of-type" => {
+                let formula = self.parse_nth_formula();
+                Some(PseudoClass::NthOfType(formula))
+            }
+            "nth-last-of-type" => {
+                let formula = self.parse_nth_formula();
+                Some(PseudoClass::NthLastOfType(formula))
+            }
+            "not" => {
+                // Parse the argument as a compound selector
+                self.parse_compound_selector()
+                    .map(|inner| PseudoClass::Not(Box::new(inner)))
+            }
+            _ => {
+                // Skip unknown function arguments
+                let mut paren_depth = 1;
+                while paren_depth > 0 {
+                    match self.peek() {
+                        TokenKind::LeftParen => {
+                            self.advance();
+                            paren_depth += 1;
+                        }
+                        TokenKind::RightParen => {
+                            paren_depth -= 1;
+                            if paren_depth > 0 {
+                                self.advance();
+                            }
+                        }
+                        TokenKind::Eof => break,
+                        _ => {
+                            self.advance();
+                        }
+                    }
+                }
+                None
+            }
+        }
+    }
+
+    /// Parse an An+B formula for :nth-* pseudo-classes
+    fn parse_nth_formula(&mut self) -> crate::selector::NthFormula {
+        use crate::selector::NthFormula;
+
+        self.skip_whitespace();
+
+        // Check for keywords
+        if let TokenKind::Ident(ident) = self.peek() {
+            let ident_lower = ident.to_lowercase();
+            match ident_lower.as_str() {
+                "odd" => {
+                    self.advance();
+                    return NthFormula::odd();
+                }
+                "even" => {
+                    self.advance();
+                    return NthFormula::even();
+                }
+                _ => {}
+            }
+        }
+
+        // Try to parse An+B format
+        // This is a simplified parser - just skip to the closing paren
+        let mut b: i32 = 0;
+
+        // Try to parse a number
+        if let TokenKind::Number(n) = self.peek() {
+            b = *n as i32;
+            self.advance();
+        }
+
+        NthFormula::new(0, b)
     }
 
     /// Parse an attribute selector
@@ -393,80 +512,76 @@ impl Parser {
 
         self.skip_whitespace();
 
-        // Check for operator
-        let op = match self.peek() {
+        // Check for operator and value
+        let matcher = match self.peek() {
             TokenKind::Equals => {
                 self.advance();
-                Some(AttributeOp::Exact)
+                self.skip_whitespace();
+                self.parse_attribute_value().map(AttributeMatcher::Exact)
             }
             TokenKind::Tilde => {
                 self.advance();
                 self.expect(&TokenKind::Equals);
-                Some(AttributeOp::Includes)
+                self.skip_whitespace();
+                self.parse_attribute_value().map(AttributeMatcher::Word)
             }
             TokenKind::Pipe => {
                 self.advance();
                 self.expect(&TokenKind::Equals);
-                Some(AttributeOp::DashMatch)
+                self.skip_whitespace();
+                self.parse_attribute_value()
+                    .map(AttributeMatcher::HyphenPrefix)
             }
             TokenKind::Caret => {
                 self.advance();
                 self.expect(&TokenKind::Equals);
-                Some(AttributeOp::Prefix)
+                self.skip_whitespace();
+                self.parse_attribute_value().map(AttributeMatcher::Prefix)
             }
             TokenKind::Dollar => {
                 self.advance();
                 self.expect(&TokenKind::Equals);
-                Some(AttributeOp::Suffix)
+                self.skip_whitespace();
+                self.parse_attribute_value().map(AttributeMatcher::Suffix)
             }
             TokenKind::Asterisk => {
                 self.advance();
                 self.expect(&TokenKind::Equals);
-                Some(AttributeOp::Substring)
+                self.skip_whitespace();
+                self.parse_attribute_value()
+                    .map(AttributeMatcher::Substring)
             }
             _ => None,
         };
 
-        let value = if op.is_some() {
-            self.skip_whitespace();
-            match self.peek().clone() {
-                TokenKind::String(s) => {
-                    self.advance();
-                    Some(s)
-                }
-                TokenKind::Ident(s) => {
-                    self.advance();
-                    Some(s)
-                }
-                _ => None,
-            }
-        } else {
-            None
-        };
-
         self.skip_whitespace();
 
-        // Check for case-insensitive flag
-        let case_insensitive = if let TokenKind::Ident(flag) = self.peek() {
+        // Skip case-insensitive flag if present
+        if let TokenKind::Ident(flag) = self.peek() {
             if flag == "i" || flag == "I" {
                 self.advance();
-                true
-            } else {
-                false
             }
-        } else {
-            false
-        };
+        }
 
         self.skip_whitespace();
         self.expect(&TokenKind::RightBracket);
 
-        Some(AttributeSelector {
-            name,
-            op,
-            value,
-            case_insensitive,
-        })
+        Some(AttributeSelector { name, matcher })
+    }
+
+    /// Parse an attribute value (string or ident)
+    fn parse_attribute_value(&mut self) -> Option<String> {
+        match self.peek().clone() {
+            TokenKind::String(s) => {
+                self.advance();
+                Some(s)
+            }
+            TokenKind::Ident(s) => {
+                self.advance();
+                Some(s)
+            }
+            _ => None,
+        }
     }
 
     /// Parse declarations inside a rule block
@@ -746,46 +861,58 @@ mod tests {
     fn parse_class_selector() {
         let stylesheet = parse(".container { width: 100%; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(
-            sel.simple_selectors[0].classes,
-            vec!["container".to_string()]
-        );
+        let compound = sel.compound_selectors().next().unwrap();
+        assert_eq!(compound.classes, vec!["container".to_string()]);
     }
 
     #[test]
     fn parse_id_selector() {
         let stylesheet = parse("#main { padding: 10px; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors[0].id, Some("main".to_string()));
+        let compound = sel.compound_selectors().next().unwrap();
+        assert_eq!(compound.id, Some("main".to_string()));
     }
 
     #[test]
     fn parse_descendant() {
         let stylesheet = parse("div p { color: red; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors.len(), 2);
-        assert!(matches!(sel.combinators[0], Combinator::Descendant));
+        let compounds: Vec<_> = sel.compound_selectors().collect();
+        assert_eq!(compounds.len(), 2);
+        assert!(sel
+            .components
+            .iter()
+            .any(|c| matches!(c, SelectorComponent::Combinator(Combinator::Descendant))));
     }
 
     #[test]
     fn parse_child() {
         let stylesheet = parse("div > p { color: red; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert!(matches!(sel.combinators[0], Combinator::Child));
+        assert!(sel
+            .components
+            .iter()
+            .any(|c| matches!(c, SelectorComponent::Combinator(Combinator::Child))));
     }
 
     #[test]
     fn parse_adjacent_sibling() {
         let stylesheet = parse("div + p { color: red; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert!(matches!(sel.combinators[0], Combinator::AdjacentSibling));
+        assert!(sel.components.iter().any(|c| matches!(
+            c,
+            SelectorComponent::Combinator(Combinator::AdjacentSibling)
+        )));
     }
 
     #[test]
     fn parse_general_sibling() {
         let stylesheet = parse("div ~ p { color: red; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert!(matches!(sel.combinators[0], Combinator::GeneralSibling));
+        assert!(sel
+            .components
+            .iter()
+            .any(|c| matches!(c, SelectorComponent::Combinator(Combinator::GeneralSibling))));
     }
 
     #[test]
@@ -839,42 +966,56 @@ mod tests {
     fn parse_attribute_presence() {
         let stylesheet = parse("[disabled] { opacity: 0.5; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors[0].attributes.len(), 1);
+        let compound = sel.compound_selectors().next().unwrap();
+        assert_eq!(compound.attributes.len(), 1);
     }
 
     #[test]
     fn parse_attribute_exact() {
         let stylesheet = parse(r#"[type="text"] { border: 1px; }"#);
         let sel = &stylesheet.rules[0].selectors[0];
-        let attr = &sel.simple_selectors[0].attributes[0];
+        let compound = sel.compound_selectors().next().unwrap();
+        let attr = &compound.attributes[0];
         assert_eq!(attr.name, "type");
-        assert_eq!(attr.value, Some("text".to_string()));
+        assert!(matches!(
+            &attr.matcher,
+            Some(AttributeMatcher::Exact(v)) if v == "text"
+        ));
     }
 
     #[test]
     fn parse_pseudo_class() {
         let stylesheet = parse("a:hover { color: blue; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert!(sel.simple_selectors[0]
+        let compound = sel.compound_selectors().next().unwrap();
+        assert!(compound
             .pseudo_classes
-            .contains(&"hover".to_string()));
+            .iter()
+            .any(|pc| matches!(pc, PseudoClass::Hover)));
     }
 
     #[test]
     fn parse_universal() {
         let stylesheet = parse("* { margin: 0; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert!(sel.simple_selectors[0].universal);
+        let compound = sel.compound_selectors().next().unwrap();
+        assert!(matches!(
+            compound.type_selector,
+            Some(TypeSelector::Universal)
+        ));
     }
 
     #[test]
     fn parse_combined_selector() {
         let stylesheet = parse("div.container#main { padding: 10px; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        let simple = &sel.simple_selectors[0];
-        assert_eq!(simple.tag_name, Some("div".to_string()));
-        assert_eq!(simple.classes, vec!["container".to_string()]);
-        assert_eq!(simple.id, Some("main".to_string()));
+        let compound = sel.compound_selectors().next().unwrap();
+        assert_eq!(
+            compound.type_selector,
+            Some(TypeSelector::Tag("div".to_string()))
+        );
+        assert_eq!(compound.classes, vec!["container".to_string()]);
+        assert_eq!(compound.id, Some("main".to_string()));
     }
 
     #[test]
