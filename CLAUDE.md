@@ -3,7 +3,7 @@
 This repository uses **Loom** for AI-powered development orchestration.
 
 **Loom Version**: 0.2.0
-**Loom Commit**: 2ad9cf9
+**Loom Commit**: 34723f2
 **Installation Date**: 2026-01-24
 
 ## What is Loom?
