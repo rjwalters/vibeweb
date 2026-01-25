@@ -40,7 +40,7 @@ impl Document {
                 NodeData::Document => {
                     writeln!(output, "{}#document", indent).unwrap();
                 }
-                NodeData::DocType(name) => {
+                NodeData::Doctype { name } => {
                     writeln!(output, "{}<!DOCTYPE {}>", indent, name).unwrap();
                 }
                 NodeData::Element(el) => {
@@ -49,7 +49,7 @@ impl Document {
                     } else {
                         // Sort attributes for deterministic output
                         let mut attrs: Vec<_> = el.attributes.iter().collect();
-                        attrs.sort_by(|a, b| a.0.cmp(b.0));
+                        attrs.sort_by(|a, b| a.0.cmp(&b.0));
                         let attr_str: Vec<_> = attrs
                             .iter()
                             .map(|(k, v)| format!("{}=\"{}\"", k, escape_attr_value(v)))
@@ -93,14 +93,14 @@ impl Document {
                 NodeData::Document => {
                     output.push_str("#doc");
                 }
-                NodeData::DocType(name) => {
+                NodeData::Doctype { name } => {
                     write!(output, "<!DOCTYPE {}>", name).unwrap();
                 }
                 NodeData::Element(el) => {
                     write!(output, "<{}", el.tag_name).unwrap();
                     if !el.attributes.is_empty() {
                         let mut attrs: Vec<_> = el.attributes.iter().collect();
-                        attrs.sort_by(|a, b| a.0.cmp(b.0));
+                        attrs.sort_by(|a, b| a.0.cmp(&b.0));
                         for (k, v) in attrs {
                             write!(output, " {}=\"{}\"", k, escape_attr_value(v)).unwrap();
                         }
@@ -168,7 +168,6 @@ fn escape_attr_value(value: &str) -> String {
 mod tests {
     use super::*;
     use crate::Document;
-    use std::collections::HashMap;
 
     #[test]
     fn test_empty_document() {
@@ -180,10 +179,11 @@ mod tests {
     #[test]
     fn test_element_with_attributes() {
         let mut doc = Document::new();
-        let mut attrs = HashMap::new();
-        attrs.insert("class".to_string(), "container".to_string());
-        attrs.insert("id".to_string(), "main".to_string());
-        let elem_id = doc.create_element_with_attrs("div", attrs);
+        let attrs = vec![
+            ("class".to_string(), "container".to_string()),
+            ("id".to_string(), "main".to_string()),
+        ];
+        let elem_id = doc.create_element_with_attributes("div", attrs);
         doc.append_child(doc.root(), elem_id);
 
         let output = doc.debug_tree();
