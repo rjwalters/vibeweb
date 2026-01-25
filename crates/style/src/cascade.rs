@@ -804,9 +804,11 @@ mod tests {
 
     #[test]
     fn test_cascade_inheritance() {
-        let mut parent = ComputedStyle::default();
-        parent.color = Color::rgb(255, 0, 0);
-        parent.font_size = 20.0;
+        let parent = ComputedStyle {
+            color: Color::rgb(255, 0, 0),
+            font_size: 20.0,
+            ..ComputedStyle::default()
+        };
 
         let cascade = Cascade::new();
         let style = cascade.compute(Some(&parent));
@@ -831,8 +833,10 @@ mod tests {
             0,
         ));
 
-        let mut parent = ComputedStyle::default();
-        parent.background_color = Color::rgb(0, 255, 0);
+        let parent = ComputedStyle {
+            background_color: Color::rgb(0, 255, 0),
+            ..ComputedStyle::default()
+        };
 
         let _style = cascade.compute(Some(&parent));
         // Background color doesn't inherit by default, but with explicit inherit it should
