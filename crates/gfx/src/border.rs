@@ -160,10 +160,26 @@ impl Border {
     /// Get the total border widths as a tuple (top, right, bottom, left)
     pub fn widths(&self) -> (f32, f32, f32, f32) {
         (
-            if self.top.is_none() { 0.0 } else { self.top.width },
-            if self.right.is_none() { 0.0 } else { self.right.width },
-            if self.bottom.is_none() { 0.0 } else { self.bottom.width },
-            if self.left.is_none() { 0.0 } else { self.left.width },
+            if self.top.is_none() {
+                0.0
+            } else {
+                self.top.width
+            },
+            if self.right.is_none() {
+                0.0
+            } else {
+                self.right.width
+            },
+            if self.bottom.is_none() {
+                0.0
+            } else {
+                self.bottom.width
+            },
+            if self.left.is_none() {
+                0.0
+            } else {
+                self.left.width
+            },
         )
     }
 }
@@ -215,7 +231,8 @@ pub fn draw_border(framebuffer: &mut Framebuffer, border_box: Rect, border: &Bor
     // Left border (between top and bottom)
     if !border.left.is_none() && border.left.width > 0.0 {
         let left_y = border_box.y + border.top.width as i32;
-        let left_height = (border_box.height as f32 - border.top.width - border.bottom.width).max(0.0);
+        let left_height =
+            (border_box.height as f32 - border.top.width - border.bottom.width).max(0.0);
         if left_height > 0.0 {
             draw_border_edge(
                 framebuffer,
@@ -233,7 +250,8 @@ pub fn draw_border(framebuffer: &mut Framebuffer, border_box: Rect, border: &Bor
     if !border.right.is_none() && border.right.width > 0.0 {
         let right_x = border_box.x + border_box.width as i32 - border.right.width as i32;
         let right_y = border_box.y + border.top.width as i32;
-        let right_height = (border_box.height as f32 - border.top.width - border.bottom.width).max(0.0);
+        let right_height =
+            (border_box.height as f32 - border.top.width - border.bottom.width).max(0.0);
         if right_height > 0.0 {
             draw_border_edge(
                 framebuffer,
@@ -276,7 +294,14 @@ fn draw_border_edge(
 }
 
 /// Draw a solid border edge
-fn draw_solid_edge(framebuffer: &mut Framebuffer, x: i32, y: i32, width: f32, height: f32, color: Color) {
+fn draw_solid_edge(
+    framebuffer: &mut Framebuffer,
+    x: i32,
+    y: i32,
+    width: f32,
+    height: f32,
+    color: Color,
+) {
     let rect = Rect::new(x, y, width.round() as u32, height.round() as u32);
     framebuffer.fill_rect(rect, color);
 }
@@ -308,7 +333,14 @@ fn draw_dashed_edge(
                     let dash_end = (current_x + dash_length).min(end_x);
                     let dash_width = dash_end - current_x;
                     if dash_width > 0.0 {
-                        draw_solid_edge(framebuffer, current_x as i32, y, dash_width, height, edge.color);
+                        draw_solid_edge(
+                            framebuffer,
+                            current_x as i32,
+                            y,
+                            dash_width,
+                            height,
+                            edge.color,
+                        );
                     }
                     current_x += dash_length;
                 } else {
@@ -328,7 +360,14 @@ fn draw_dashed_edge(
                     let dash_end = (current_y + dash_length).min(end_y);
                     let dash_height = dash_end - current_y;
                     if dash_height > 0.0 {
-                        draw_solid_edge(framebuffer, x, current_y as i32, width, dash_height, edge.color);
+                        draw_solid_edge(
+                            framebuffer,
+                            x,
+                            current_y as i32,
+                            width,
+                            dash_height,
+                            edge.color,
+                        );
                     }
                     current_y += dash_length;
                 } else {
@@ -364,7 +403,14 @@ fn draw_dotted_edge(
             let dot_y = y as f32 + (height - dot_size) / 2.0;
 
             while current_x + dot_size <= end_x {
-                draw_solid_edge(framebuffer, current_x as i32, dot_y as i32, dot_size, dot_size, edge.color);
+                draw_solid_edge(
+                    framebuffer,
+                    current_x as i32,
+                    dot_y as i32,
+                    dot_size,
+                    dot_size,
+                    edge.color,
+                );
                 current_x += dot_size + spacing;
             }
         }
@@ -376,7 +422,14 @@ fn draw_dotted_edge(
             let dot_x = x as f32 + (width - dot_size) / 2.0;
 
             while current_y + dot_size <= end_y {
-                draw_solid_edge(framebuffer, dot_x as i32, current_y as i32, dot_size, dot_size, edge.color);
+                draw_solid_edge(
+                    framebuffer,
+                    dot_x as i32,
+                    current_y as i32,
+                    dot_size,
+                    dot_size,
+                    edge.color,
+                );
                 current_y += dot_size + spacing;
             }
         }
@@ -553,10 +606,10 @@ mod tests {
         draw_border(&mut fb, Rect::new(10, 10, 20, 20), &border);
 
         // Check each edge has correct color
-        assert_eq!(fb.get_pixel(15, 10), Color::RED);    // top
-        assert_eq!(fb.get_pixel(28, 15), Color::GREEN);  // right
-        assert_eq!(fb.get_pixel(15, 29), Color::BLUE);   // bottom
-        assert_eq!(fb.get_pixel(10, 15), Color::BLACK);  // left
+        assert_eq!(fb.get_pixel(15, 10), Color::RED); // top
+        assert_eq!(fb.get_pixel(28, 15), Color::GREEN); // right
+        assert_eq!(fb.get_pixel(15, 29), Color::BLUE); // bottom
+        assert_eq!(fb.get_pixel(10, 15), Color::BLACK); // left
     }
 
     #[test]
@@ -641,7 +694,7 @@ mod tests {
 
         // Top border should have black, gap, black pattern vertically
         let top_outer = fb.get_pixel(30, 10); // First line
-        let top_gap = fb.get_pixel(30, 12);   // Gap area
+        let top_gap = fb.get_pixel(30, 12); // Gap area
         let top_inner = fb.get_pixel(30, 14); // Second line
 
         assert_eq!(top_outer, Color::BLACK, "Outer line should be black");
