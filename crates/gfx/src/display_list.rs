@@ -28,6 +28,8 @@
 use crate::color::Color;
 use crate::framebuffer::Framebuffer;
 use crate::rect::Rect;
+use std::sync::Arc;
+use vw_image::DecodedImage;
 
 /// Edge widths for border rendering.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -73,7 +75,7 @@ impl BorderWidths {
 ///
 /// Commands are rendered in order, implementing the painter's algorithm
 /// where later commands paint over earlier ones.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum DisplayCommand {
     /// Fill a rectangle with a solid color.
     SolidColor {
@@ -121,6 +123,72 @@ pub enum DisplayCommand {
 
     /// Pop the current clipping rectangle from the clip stack.
     PopClip,
+
+    /// Draw an image at a position.
+    ///
+    /// The image is rendered with alpha blending support for transparent pixels.
+    Image {
+        /// X position of the image's top-left corner
+        x: i32,
+        /// Y position of the image's top-left corner
+        y: i32,
+        /// The decoded image data (shared to avoid copying)
+        image: Arc<DecodedImage>,
+    },
+}
+
+impl PartialEq for DisplayCommand {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                DisplayCommand::SolidColor { rect: r1, color: c1 },
+                DisplayCommand::SolidColor { rect: r2, color: c2 },
+            ) => r1 == r2 && c1 == c2,
+            (
+                DisplayCommand::Border {
+                    rect: r1,
+                    widths: w1,
+                    color: c1,
+                },
+                DisplayCommand::Border {
+                    rect: r2,
+                    widths: w2,
+                    color: c2,
+                },
+            ) => r1 == r2 && w1 == w2 && c1 == c2,
+            (
+                DisplayCommand::Text {
+                    x: x1,
+                    y: y1,
+                    text: t1,
+                    color: c1,
+                    font_size: f1,
+                },
+                DisplayCommand::Text {
+                    x: x2,
+                    y: y2,
+                    text: t2,
+                    color: c2,
+                    font_size: f2,
+                },
+            ) => x1 == x2 && y1 == y2 && t1 == t2 && c1 == c2 && f1 == f2,
+            (DisplayCommand::PushClip(r1), DisplayCommand::PushClip(r2)) => r1 == r2,
+            (DisplayCommand::PopClip, DisplayCommand::PopClip) => true,
+            (
+                DisplayCommand::Image {
+                    x: x1,
+                    y: y1,
+                    image: i1,
+                },
+                DisplayCommand::Image {
+                    x: x2,
+                    y: y2,
+                    image: i2,
+                },
+            ) => x1 == x2 && y1 == y2 && Arc::ptr_eq(i1, i2),
+            _ => false,
+        }
+    }
 }
 
 /// A display list is an ordered collection of drawing commands.
@@ -190,6 +258,15 @@ impl DisplayList {
     /// Pop the current clip rectangle.
     pub fn pop_clip(&mut self) {
         self.commands.push(DisplayCommand::PopClip);
+    }
+
+    /// Add an image command.
+    ///
+    /// The image is rendered at the given position with alpha blending support.
+    pub fn push_image(&mut self, x: i32, y: i32, image: Arc<DecodedImage>) {
+        if image.width > 0 && image.height > 0 {
+            self.commands.push(DisplayCommand::Image { x, y, image });
+        }
     }
 
     /// Get the number of commands in the display list.
@@ -271,6 +348,13 @@ impl DisplayList {
 
                 DisplayCommand::PopClip => {
                     clip_stack.pop();
+                }
+
+                DisplayCommand::Image { x, y, image } => {
+                    // For now, images are blitted without clip stack support.
+                    // The framebuffer's blit_image handles basic bounds clipping.
+                    // Full clip stack support for images can be added later if needed.
+                    framebuffer.blit_image(*x, *y, image.as_ref());
                 }
             }
         }
@@ -367,6 +451,7 @@ fn intersect_rects(a: Rect, b: Rect) -> Option<Rect> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vw_image::PixelFormat;
 
     #[test]
     fn test_display_list_new() {
@@ -570,5 +655,131 @@ mod tests {
         assert_eq!(fb.get_pixel(2, 2), Color::RED);
         // Outside both should be white
         assert_eq!(fb.get_pixel(25, 25), Color::WHITE);
+    }
+
+    #[test]
+    fn test_push_image() {
+        let mut list = DisplayList::new();
+
+        // 2x2 red image (4 pixels * 4 bytes = 16 bytes)
+        let image = Arc::new(DecodedImage::new(
+            2,
+            2,
+            PixelFormat::Rgba,
+            vec![
+                255, 0, 0, 255, // red
+                255, 0, 0, 255, // red
+                255, 0, 0, 255, // red
+                255, 0, 0, 255, // red
+            ],
+        ));
+
+        list.push_image(10, 10, image);
+        assert_eq!(list.len(), 1);
+    }
+
+    #[test]
+    fn test_push_empty_image_not_added() {
+        let mut list = DisplayList::new();
+
+        let image = Arc::new(DecodedImage::new(0, 0, PixelFormat::Rgba, vec![]));
+
+        list.push_image(10, 10, image);
+        assert!(list.is_empty());
+    }
+
+    #[test]
+    fn test_paint_image() {
+        let mut list = DisplayList::new();
+
+        // 2x2 green image
+        let image = Arc::new(DecodedImage::new(
+            2,
+            2,
+            PixelFormat::Rgba,
+            vec![
+                0, 255, 0, 255, // green
+                0, 255, 0, 255, // green
+                0, 255, 0, 255, // green
+                0, 255, 0, 255, // green
+            ],
+        ));
+
+        list.push_image(5, 5, image);
+
+        let mut fb = Framebuffer::new(100, 100);
+        fb.clear(Color::WHITE);
+        list.paint(&mut fb);
+
+        // Check image pixels
+        assert_eq!(fb.get_pixel(5, 5), Color::GREEN);
+        assert_eq!(fb.get_pixel(6, 6), Color::GREEN);
+
+        // Check surrounding pixels are still white
+        assert_eq!(fb.get_pixel(4, 4), Color::WHITE);
+        assert_eq!(fb.get_pixel(7, 7), Color::WHITE);
+    }
+
+    #[test]
+    fn test_paint_image_with_alpha() {
+        let mut list = DisplayList::new();
+
+        // 1x1 semi-transparent blue over red background
+        let image = Arc::new(DecodedImage::new(
+            1,
+            1,
+            PixelFormat::Rgba,
+            vec![0, 0, 255, 128], // 50% alpha blue
+        ));
+
+        // First paint a red background
+        list.push_solid_color(Rect::new(0, 0, 10, 10), Color::RED);
+        // Then overlay the semi-transparent blue image
+        list.push_image(5, 5, image);
+
+        let mut fb = Framebuffer::new(100, 100);
+        fb.clear(Color::WHITE);
+        list.paint(&mut fb);
+
+        // The result should be a blend of blue and red
+        let result = fb.get_pixel(5, 5);
+        // Blue (0, 0, 255) at 50% over Red (255, 0, 0)
+        // R: 0 * 128/255 + 255 * 127/255 = 127
+        // G: 0
+        // B: 255 * 128/255 + 0 * 127/255 = 128
+        assert_eq!(result.r, 127);
+        assert_eq!(result.g, 0);
+        assert_eq!(result.b, 128);
+    }
+
+    #[test]
+    fn test_image_painters_algorithm() {
+        // Images should paint over earlier commands
+        let mut list = DisplayList::new();
+
+        list.push_solid_color(Rect::new(0, 0, 20, 20), Color::RED);
+
+        // Blue 2x2 image on top
+        let image = Arc::new(DecodedImage::new(
+            2,
+            2,
+            PixelFormat::Rgba,
+            vec![
+                0, 0, 255, 255, // blue
+                0, 0, 255, 255, // blue
+                0, 0, 255, 255, // blue
+                0, 0, 255, 255, // blue
+            ],
+        ));
+        list.push_image(5, 5, image);
+
+        let mut fb = Framebuffer::new(100, 100);
+        fb.clear(Color::WHITE);
+        list.paint(&mut fb);
+
+        // Image area should be blue
+        assert_eq!(fb.get_pixel(5, 5), Color::BLUE);
+        // Non-overlapping area should still be red
+        assert_eq!(fb.get_pixel(2, 2), Color::RED);
     }
 }
