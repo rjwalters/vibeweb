@@ -419,7 +419,7 @@ mod tests {
         let p = doc.get_element_by_tag_name("p").unwrap();
         // br should be a child of p
         let children: Vec<_> = doc.children(p).collect();
-        assert!(children.iter().any(|&id| id == br));
+        assert!(children.contains(&br));
     }
 
     #[test]
