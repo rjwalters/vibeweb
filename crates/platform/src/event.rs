@@ -207,7 +207,6 @@ pub enum Event {
     CloseRequested,
 
     // Mouse events
-
     /// Mouse cursor moved within the window
     MouseMoved {
         /// X coordinate in physical pixels
@@ -237,7 +236,6 @@ pub enum Event {
     },
 
     // Keyboard events
-
     /// Keyboard key was pressed or released
     KeyboardInput {
         /// Which key

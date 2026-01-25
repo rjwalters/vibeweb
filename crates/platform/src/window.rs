@@ -186,7 +186,15 @@ where
                 let button = map_mouse_button(button);
                 let state = map_element_state(state);
                 let (x, y) = self.cursor_position;
-                (self.callback)(&ctx, Event::MouseButton { button, state, x, y });
+                (self.callback)(
+                    &ctx,
+                    Event::MouseButton {
+                        button,
+                        state,
+                        x,
+                        y,
+                    },
+                );
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let (delta_x, delta_y) = match delta {
