@@ -23,11 +23,7 @@ pub fn build_layout_tree(document: &Document, styles: &StyleTree) -> Option<Layo
 }
 
 /// Build a layout box for a single node.
-fn build_layout_box(
-    document: &Document,
-    styles: &StyleTree,
-    node: &NodeData,
-) -> Option<LayoutBox> {
+fn build_layout_box(document: &Document, styles: &StyleTree, node: &NodeData) -> Option<LayoutBox> {
     match node.node_type {
         NodeType::Element => build_element_box(document, styles, node),
         NodeType::Text => build_text_box(node),
@@ -240,7 +236,11 @@ mod tests {
         let hidden_id = document.add_node(NodeData::element(NodeId(0), "span"));
 
         document.get_node_mut(doc_id).unwrap().children.push(div_id);
-        document.get_node_mut(div_id).unwrap().children.push(hidden_id);
+        document
+            .get_node_mut(div_id)
+            .unwrap()
+            .children
+            .push(hidden_id);
 
         styles.insert(div_id, ComputedStyle::default());
         styles.insert(

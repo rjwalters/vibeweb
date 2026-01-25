@@ -304,16 +304,10 @@ mod tests {
     fn test_line_box_metrics() {
         let mut line = LineBox::new(0.0, 0.0);
 
-        let fragment1 = InlineFragment::text(
-            "Hello".to_string(),
-            0.0,
-            TextMetrics::new(48.0, 12.0, 4.0),
-        );
-        let fragment2 = InlineFragment::text(
-            "World".to_string(),
-            48.0,
-            TextMetrics::new(48.0, 14.0, 6.0),
-        );
+        let fragment1 =
+            InlineFragment::text("Hello".to_string(), 0.0, TextMetrics::new(48.0, 12.0, 4.0));
+        let fragment2 =
+            InlineFragment::text("World".to_string(), 48.0, TextMetrics::new(48.0, 14.0, 6.0));
 
         line.add_fragment(fragment1);
         line.add_fragment(fragment2);

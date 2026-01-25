@@ -170,7 +170,9 @@ impl DocumentBuilder {
 
     /// Add an element as a child of the current node.
     pub fn element(mut self, tag_name: &str) -> Self {
-        let id = self.document.add_node(NodeData::element(NodeId(0), tag_name));
+        let id = self
+            .document
+            .add_node(NodeData::element(NodeId(0), tag_name));
         if let Some(parent_id) = self.current_id {
             if let Some(parent) = self.document.get_node_mut(parent_id) {
                 parent.children.push(id);
@@ -244,7 +246,10 @@ mod tests {
         doc.get_node_mut(body).unwrap().children.push(text);
 
         assert_eq!(doc.root(), Some(root));
-        assert_eq!(doc.get_node(root).unwrap().tag_name, Some("html".to_string()));
+        assert_eq!(
+            doc.get_node(root).unwrap().tag_name,
+            Some("html".to_string())
+        );
 
         let children: Vec<_> = doc.children(root).collect();
         assert_eq!(children.len(), 1);

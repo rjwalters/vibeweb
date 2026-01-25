@@ -206,7 +206,12 @@ pub struct Rect {
 impl Rect {
     /// Create a new rectangle.
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Rect { x, y, width, height }
+        Rect {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     /// Create a rectangle at the origin with the given size.

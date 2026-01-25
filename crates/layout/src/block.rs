@@ -51,8 +51,8 @@ impl LayoutBox {
         let total_fixed = border_left + padding_left + padding_right + border_right;
 
         // Resolve width and margins
-        let (resolved_width, resolved_margin_left, resolved_margin_right) =
-            self.resolve_width_and_margins(
+        let (resolved_width, resolved_margin_left, resolved_margin_right) = self
+            .resolve_width_and_margins(
                 containing_width,
                 width,
                 margin_left,
@@ -147,26 +147,17 @@ impl LayoutBox {
         let d = &mut self.dimensions;
 
         // x position: containing block x + margin-left + border-left + padding-left
-        d.content.x = containing_block.content.x
-            + d.margin.left
-            + d.border.left
-            + d.padding.left;
+        d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
 
         // y position: at the top of the containing block's content area
         // (For child boxes, position_at_y is used instead to place them vertically)
-        d.content.y = containing_block.content.y
-            + d.margin.top
-            + d.border.top
-            + d.padding.top;
+        d.content.y = containing_block.content.y + d.margin.top + d.border.top + d.padding.top;
     }
 
     /// Position this box at a specific y-coordinate.
     pub fn position_at_y(&mut self, y: f32, containing_block: &Dimensions) {
         let d = &mut self.dimensions;
-        d.content.x = containing_block.content.x
-            + d.margin.left
-            + d.border.left
-            + d.padding.left;
+        d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
         d.content.y = y + d.margin.top + d.border.top + d.padding.top;
     }
 

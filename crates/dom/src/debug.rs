@@ -222,10 +222,14 @@ mod tests {
         let body_line = lines.iter().find(|l| l.contains("<body>")).unwrap();
 
         // html should be less indented than head and body
-        assert!(html_line.len() - html_line.trim_start().len() <
-                head_line.len() - head_line.trim_start().len());
-        assert!(html_line.len() - html_line.trim_start().len() <
-                body_line.len() - body_line.trim_start().len());
+        assert!(
+            html_line.len() - html_line.trim_start().len()
+                < head_line.len() - head_line.trim_start().len()
+        );
+        assert!(
+            html_line.len() - html_line.trim_start().len()
+                < body_line.len() - body_line.trim_start().len()
+        );
     }
 
     #[test]
