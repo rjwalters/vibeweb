@@ -1,0 +1,15 @@
+[package]
+name = "vw-renderer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+vw-dom = { path = "../dom" }
+vw-html = { path = "../html" }
+vw-css = { path = "../css" }
+vw-style = { path = "../style" }
+vw-layout = { path = "../layout" }
+vw-gfx = { path = "../gfx" }
+thiserror.workspace = true

@@ -1,12 +1,13 @@
 //! Vibeweb browser - main entry point
 //!
-//! M0 milestone: Opens a window and displays a colored rectangle.
+//! M4 milestone: Uses the vw-renderer crate to orchestrate the render pipeline.
 
 use softbuffer::{Context, Surface};
 use std::num::NonZeroU32;
 use std::sync::Arc;
-use vw_gfx::{Color, Framebuffer, Rect};
+use vw_gfx::Framebuffer;
 use vw_platform::{Event, Window, WindowConfig, WinitWindow};
+use vw_renderer::Browser;
 
 /// Graphics state that holds the softbuffer context and surface.
 /// The context must be kept alive for the surface to work.
@@ -16,8 +17,28 @@ struct GraphicsState {
     surface: Surface<Arc<WinitWindow>, Arc<WinitWindow>>,
 }
 
+/// Default HTML to render when no document is loaded.
+const DEFAULT_HTML: &str = r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vibeweb Browser</title>
+</head>
+<body>
+    <h1>Welcome to Vibeweb</h1>
+    <p>A browser built from scratch in Rust.</p>
+    <div>
+        <p>This is the render pipeline test page.</p>
+    </div>
+</body>
+</html>
+"#;
+
+/// Default CSS for the default document.
+const DEFAULT_CSS: &str = "";
+
 fn main() {
-    println!("vibeweb browser - M0 bootstrap");
+    println!("vibeweb browser - M4 render pipeline");
 
     // Create window configuration
     let config = WindowConfig::new("Vibeweb Browser", 800, 600);
@@ -28,6 +49,10 @@ fn main() {
     // State for rendering
     let mut framebuffer = Framebuffer::new(800, 600);
     let mut graphics: Option<GraphicsState> = None;
+
+    // Create the browser with a default document
+    let mut browser = Browser::new(DEFAULT_HTML, DEFAULT_CSS, 800, 600)
+        .expect("Failed to create browser");
 
     // Run the event loop
     window
@@ -45,23 +70,16 @@ fn main() {
                 Event::Redraw => {
                     let (width, height) = ctx.size();
 
+                    // Resize browser viewport if window size changed
+                    browser.resize(width, height);
+
                     // Ensure framebuffer matches window size
                     if framebuffer.width() != width || framebuffer.height() != height {
                         framebuffer.resize(width, height);
                     }
 
-                    // Clear to white background
-                    framebuffer.clear(Color::WHITE);
-
-                    // Calculate centered rectangle position
-                    let rect_width = 200u32;
-                    let rect_height = 200u32;
-                    let rect_x = (width.saturating_sub(rect_width) / 2) as i32;
-                    let rect_y = (height.saturating_sub(rect_height) / 2) as i32;
-
-                    // Draw a centered red rectangle
-                    let rect = Rect::new(rect_x, rect_y, rect_width, rect_height);
-                    framebuffer.fill_rect(rect, Color::RED);
+                    // Paint using the render pipeline
+                    browser.paint(&mut framebuffer);
 
                     // Present to window via softbuffer
                     if let Some(ref mut gfx) = graphics {
@@ -78,7 +96,8 @@ fn main() {
                 }
 
                 Event::Resize { width, height } => {
-                    framebuffer.resize(width, height);
+                    // Browser.resize handles invalidation
+                    browser.resize(width, height);
                     ctx.request_redraw();
                 }
 

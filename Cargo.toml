@@ -14,6 +14,7 @@ members = [
     "crates/platform",
     "crates/image",
     "crates/fonts",
+    "crates/renderer",
     "tools/harness",
 ]
 
@@ -37,6 +38,7 @@ vw-gfx = { path = "crates/gfx" }
 vw-platform = { path = "crates/platform" }
 vw-image = { path = "crates/image" }
 vw-fonts = { path = "crates/fonts" }
+vw-renderer = { path = "crates/renderer" }
 harness = { path = "tools/harness" }
 
 # External dependencies
