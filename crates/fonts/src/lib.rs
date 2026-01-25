@@ -153,12 +153,8 @@ mod tests {
         );
         assert!(metrics.is_some());
 
-        let font_metrics = measurer.font_metrics(
-            16.0,
-            "sans-serif",
-            FontWeight::Normal,
-            FontStyle::Normal,
-        );
+        let font_metrics =
+            measurer.font_metrics(16.0, "sans-serif", FontWeight::Normal, FontStyle::Normal);
         assert!(font_metrics.is_some());
     }
 

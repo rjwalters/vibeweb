@@ -218,7 +218,10 @@ mod tests {
             assert!(metrics.descent <= 0.0, "Descent should be negative or zero");
 
             // Line height should be positive
-            assert!(metrics.line_height() > 0.0, "Line height should be positive");
+            assert!(
+                metrics.line_height() > 0.0,
+                "Line height should be positive"
+            );
 
             // Size should match what we requested
             assert_eq!(metrics.size, 16.0);
@@ -231,7 +234,10 @@ mod tests {
             let metrics = font.measure_char('A', 16.0);
 
             // Advance width should be positive
-            assert!(metrics.advance_width > 0.0, "Advance width should be positive");
+            assert!(
+                metrics.advance_width > 0.0,
+                "Advance width should be positive"
+            );
 
             // Space should have different width than 'W'
             let space_metrics = font.measure_char(' ', 16.0);

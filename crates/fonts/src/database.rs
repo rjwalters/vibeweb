@@ -46,7 +46,12 @@ impl FontDb {
     }
 
     /// Find a font by generic family (sans-serif, serif, monospace)
-    pub fn find_generic(&self, family: GenericFamily, weight: FontWeight, style: FontStyle) -> Option<FontId> {
+    pub fn find_generic(
+        &self,
+        family: GenericFamily,
+        weight: FontWeight,
+        style: FontStyle,
+    ) -> Option<FontId> {
         let fontdb_family = match family {
             GenericFamily::Serif => fontdb::Family::Serif,
             GenericFamily::SansSerif => fontdb::Family::SansSerif,
@@ -67,15 +72,17 @@ impl FontDb {
     /// Get fallback font (system default sans-serif)
     pub fn fallback(&self) -> Option<FontId> {
         // Try sans-serif first, then any available font
-        self.find_generic(GenericFamily::SansSerif, FontWeight::Normal, FontStyle::Normal)
-            .or_else(|| self.db.faces().next().map(|f| FontId(f.id)))
+        self.find_generic(
+            GenericFamily::SansSerif,
+            FontWeight::Normal,
+            FontStyle::Normal,
+        )
+        .or_else(|| self.db.faces().next().map(|f| FontId(f.id)))
     }
 
     /// Load font data for a given ID
     pub fn load_font(&self, id: FontId) -> Option<Font> {
-        self.db
-            .with_face_data(id.0, Font::from_data)
-            .flatten()
+        self.db.with_face_data(id.0, Font::from_data).flatten()
     }
 
     /// Get the font family name for a given ID
@@ -113,7 +120,7 @@ pub enum FontWeight {
     ExtraLight, // 200
     Light,      // 300
     #[default]
-    Normal,     // 400
+    Normal, // 400
     Medium,     // 500
     SemiBold,   // 600
     Bold,       // 700
@@ -233,7 +240,11 @@ mod tests {
     #[test]
     fn test_find_generic_sans_serif() {
         let db = FontDb::new();
-        let font = db.find_generic(GenericFamily::SansSerif, FontWeight::Normal, FontStyle::Normal);
+        let font = db.find_generic(
+            GenericFamily::SansSerif,
+            FontWeight::Normal,
+            FontStyle::Normal,
+        );
         // Most systems have a sans-serif font
         assert!(font.is_some(), "Should find a sans-serif font");
     }

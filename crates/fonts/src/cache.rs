@@ -101,7 +101,12 @@ impl FontCache {
     }
 
     /// Resolve a font family name to a FontId
-    fn resolve_font_id(&mut self, family: &str, weight: FontWeight, style: FontStyle) -> Option<FontId> {
+    fn resolve_font_id(
+        &mut self,
+        family: &str,
+        weight: FontWeight,
+        style: FontStyle,
+    ) -> Option<FontId> {
         let cache_key = (family.to_string(), weight, style);
 
         // Check lookup cache first
