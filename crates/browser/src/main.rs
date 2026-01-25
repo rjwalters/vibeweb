@@ -105,10 +105,18 @@ fn main() {
                     println!("Window close requested, exiting...");
                 }
 
-                // Input events (will be handled in M5 - Navigation UX)
+                // Mouse wheel events for scrolling
+                Event::MouseWheel { delta_x, delta_y } => {
+                    // Apply scroll delta to browser
+                    // Note: delta is typically negative when scrolling down (content moves up)
+                    // We negate delta_y so positive delta scrolls content up (natural scrolling)
+                    browser.scroll(delta_x as f32, -delta_y as f32);
+                    ctx.request_redraw();
+                }
+
+                // Other input events (will be handled in M5 - Navigation UX)
                 Event::MouseMoved { .. }
                 | Event::MouseButton { .. }
-                | Event::MouseWheel { .. }
                 | Event::KeyboardInput { .. }
                 | Event::CharacterInput { .. } => {
                     // TODO: Handle input events for interactive features
