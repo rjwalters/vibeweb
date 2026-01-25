@@ -3,11 +3,9 @@
 //! Recursive descent parser that produces a Stylesheet from CSS text.
 //! This is a simplified parser focused on common CSS patterns.
 
+use crate::selectors::{AttributeOp, AttributeSelector, Combinator, Selector, SimpleSelector};
 use crate::tokenizer::{Token, TokenKind, Tokenizer};
 use crate::values::{Color, CssValue, Length, LengthUnit};
-use crate::selectors::{
-    AttributeOp, AttributeSelector, Combinator, Selector, SimpleSelector,
-};
 
 /// A parsed CSS stylesheet
 #[derive(Debug, Clone, Default)]
@@ -91,10 +89,7 @@ impl Parser {
     fn new(input: &str) -> Self {
         let tokenizer = Tokenizer::new(input);
         let tokens = tokenizer.tokenize();
-        Parser {
-            tokens,
-            pos: 0,
-        }
+        Parser { tokens, pos: 0 }
     }
 
     /// Peek at the current token
@@ -107,7 +102,8 @@ impl Parser {
 
     /// Consume the current token
     fn advance(&mut self) -> TokenKind {
-        let token = self.tokens
+        let token = self
+            .tokens
             .get(self.pos)
             .map(|t| t.kind.clone())
             .unwrap_or(TokenKind::Eof);
@@ -750,7 +746,10 @@ mod tests {
     fn parse_class_selector() {
         let stylesheet = parse(".container { width: 100%; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors[0].classes, vec!["container".to_string()]);
+        assert_eq!(
+            sel.simple_selectors[0].classes,
+            vec!["container".to_string()]
+        );
     }
 
     #[test]
@@ -856,7 +855,9 @@ mod tests {
     fn parse_pseudo_class() {
         let stylesheet = parse("a:hover { color: blue; }");
         let sel = &stylesheet.rules[0].selectors[0];
-        assert!(sel.simple_selectors[0].pseudo_classes.contains(&"hover".to_string()));
+        assert!(sel.simple_selectors[0]
+            .pseudo_classes
+            .contains(&"hover".to_string()));
     }
 
     #[test]

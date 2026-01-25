@@ -139,10 +139,11 @@ impl<'a> Tokenizer<'a> {
                 None | Some('>') | Some('/') => break,
                 Some(_) => {
                     // Parse attribute name
-                    let name = self.consume_while(|c| {
-                        c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == ':'
-                    })
-                    .to_ascii_lowercase();
+                    let name = self
+                        .consume_while(|c| {
+                            c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == ':'
+                        })
+                        .to_ascii_lowercase();
 
                     if name.is_empty() {
                         // Skip any unexpected character
@@ -250,7 +251,11 @@ impl<'a> Tokenizer<'a> {
         self.consume_while(|c| c.is_ascii_alphabetic() || c == '!');
         self.skip_whitespace();
 
-        let name = if self.peek().map(|c| c.is_ascii_alphabetic()).unwrap_or(false) {
+        let name = if self
+            .peek()
+            .map(|c| c.is_ascii_alphabetic())
+            .unwrap_or(false)
+        {
             Some(self.parse_tag_name())
         } else {
             None
@@ -305,148 +310,175 @@ mod tests {
     #[test]
     fn test_simple_element() {
         let tokens: Vec<_> = Tokenizer::new("<div></div>").collect();
-        assert_eq!(tokens, vec![
-            Token::StartTag {
-                name: "div".to_string(),
-                attributes: vec![],
-                self_closing: false,
-            },
-            Token::EndTag {
-                name: "div".to_string(),
-            },
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::StartTag {
+                    name: "div".to_string(),
+                    attributes: vec![],
+                    self_closing: false,
+                },
+                Token::EndTag {
+                    name: "div".to_string(),
+                },
+            ]
+        );
     }
 
     #[test]
     fn test_text_content() {
         let tokens: Vec<_> = Tokenizer::new("<p>Hello World</p>").collect();
-        assert_eq!(tokens, vec![
-            Token::StartTag {
-                name: "p".to_string(),
-                attributes: vec![],
-                self_closing: false,
-            },
-            Token::Text("Hello World".to_string()),
-            Token::EndTag {
-                name: "p".to_string(),
-            },
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::StartTag {
+                    name: "p".to_string(),
+                    attributes: vec![],
+                    self_closing: false,
+                },
+                Token::Text("Hello World".to_string()),
+                Token::EndTag {
+                    name: "p".to_string(),
+                },
+            ]
+        );
     }
 
     #[test]
     fn test_attributes() {
         let tokens: Vec<_> = Tokenizer::new(r#"<div class="container" id="main"></div>"#).collect();
-        assert_eq!(tokens, vec![
-            Token::StartTag {
-                name: "div".to_string(),
-                attributes: vec![
-                    ("class".to_string(), "container".to_string()),
-                    ("id".to_string(), "main".to_string()),
-                ],
-                self_closing: false,
-            },
-            Token::EndTag {
-                name: "div".to_string(),
-            },
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::StartTag {
+                    name: "div".to_string(),
+                    attributes: vec![
+                        ("class".to_string(), "container".to_string()),
+                        ("id".to_string(), "main".to_string()),
+                    ],
+                    self_closing: false,
+                },
+                Token::EndTag {
+                    name: "div".to_string(),
+                },
+            ]
+        );
     }
 
     #[test]
     fn test_self_closing() {
         let tokens: Vec<_> = Tokenizer::new("<br/>").collect();
-        assert_eq!(tokens, vec![
-            Token::StartTag {
+        assert_eq!(
+            tokens,
+            vec![Token::StartTag {
                 name: "br".to_string(),
                 attributes: vec![],
                 self_closing: true,
-            },
-        ]);
+            },]
+        );
     }
 
     #[test]
     fn test_comment() {
         let tokens: Vec<_> = Tokenizer::new("<!-- This is a comment -->").collect();
-        assert_eq!(tokens, vec![
-            Token::Comment(" This is a comment ".to_string()),
-        ]);
+        assert_eq!(
+            tokens,
+            vec![Token::Comment(" This is a comment ".to_string()),]
+        );
     }
 
     #[test]
     fn test_doctype() {
         let tokens: Vec<_> = Tokenizer::new("<!DOCTYPE html>").collect();
-        assert_eq!(tokens, vec![
-            Token::Doctype {
+        assert_eq!(
+            tokens,
+            vec![Token::Doctype {
                 name: Some("html".to_string()),
-            },
-        ]);
+            },]
+        );
     }
 
     #[test]
     fn test_lowercase_tags() {
         let tokens: Vec<_> = Tokenizer::new("<DIV></DIV>").collect();
-        assert_eq!(tokens, vec![
-            Token::StartTag {
-                name: "div".to_string(),
-                attributes: vec![],
-                self_closing: false,
-            },
-            Token::EndTag {
-                name: "div".to_string(),
-            },
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::StartTag {
+                    name: "div".to_string(),
+                    attributes: vec![],
+                    self_closing: false,
+                },
+                Token::EndTag {
+                    name: "div".to_string(),
+                },
+            ]
+        );
     }
 
     #[test]
     fn test_boolean_attribute() {
         let tokens: Vec<_> = Tokenizer::new("<input disabled>").collect();
-        assert_eq!(tokens, vec![
-            Token::StartTag {
+        assert_eq!(
+            tokens,
+            vec![Token::StartTag {
                 name: "input".to_string(),
-                attributes: vec![
-                    ("disabled".to_string(), String::new()),
-                ],
+                attributes: vec![("disabled".to_string(), String::new()),],
                 self_closing: false,
-            },
-        ]);
+            },]
+        );
     }
 
     #[test]
     fn test_unquoted_attribute() {
         let tokens: Vec<_> = Tokenizer::new("<div class=container>").collect();
-        assert_eq!(tokens, vec![
-            Token::StartTag {
+        assert_eq!(
+            tokens,
+            vec![Token::StartTag {
                 name: "div".to_string(),
-                attributes: vec![
-                    ("class".to_string(), "container".to_string()),
-                ],
+                attributes: vec![("class".to_string(), "container".to_string()),],
                 self_closing: false,
-            },
-        ]);
+            },]
+        );
     }
 
     #[test]
     fn test_single_quoted_attribute() {
         let tokens: Vec<_> = Tokenizer::new("<div class='container'>").collect();
-        assert_eq!(tokens, vec![
-            Token::StartTag {
+        assert_eq!(
+            tokens,
+            vec![Token::StartTag {
                 name: "div".to_string(),
-                attributes: vec![
-                    ("class".to_string(), "container".to_string()),
-                ],
+                attributes: vec![("class".to_string(), "container".to_string()),],
                 self_closing: false,
-            },
-        ]);
+            },]
+        );
     }
 
     #[test]
     fn test_nested_elements() {
         let tokens: Vec<_> = Tokenizer::new("<div><p>Hello</p></div>").collect();
-        assert_eq!(tokens, vec![
-            Token::StartTag { name: "div".to_string(), attributes: vec![], self_closing: false },
-            Token::StartTag { name: "p".to_string(), attributes: vec![], self_closing: false },
-            Token::Text("Hello".to_string()),
-            Token::EndTag { name: "p".to_string() },
-            Token::EndTag { name: "div".to_string() },
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::StartTag {
+                    name: "div".to_string(),
+                    attributes: vec![],
+                    self_closing: false
+                },
+                Token::StartTag {
+                    name: "p".to_string(),
+                    attributes: vec![],
+                    self_closing: false
+                },
+                Token::Text("Hello".to_string()),
+                Token::EndTag {
+                    name: "p".to_string()
+                },
+                Token::EndTag {
+                    name: "div".to_string()
+                },
+            ]
+        );
     }
 }

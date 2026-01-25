@@ -50,8 +50,8 @@ pub struct Window {
 impl Window {
     /// Create a new window with the given configuration
     pub fn new(config: WindowConfig) -> Result<Self, PlatformError> {
-        let event_loop = EventLoop::new()
-            .map_err(|e| PlatformError::EventLoopCreation(e.to_string()))?;
+        let event_loop =
+            EventLoop::new().map_err(|e| PlatformError::EventLoopCreation(e.to_string()))?;
 
         Ok(Self { event_loop, config })
     }

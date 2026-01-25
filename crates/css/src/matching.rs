@@ -120,7 +120,14 @@ fn matches_from_index<C: PseudoClassContext>(
             match &components[index - 1] {
                 SelectorComponent::Combinator(combinator) => {
                     // Match the combinator against the DOM structure
-                    match_combinator(*combinator, components, index - 2, element, document, context)
+                    match_combinator(
+                        *combinator,
+                        components,
+                        index - 2,
+                        element,
+                        document,
+                        context,
+                    )
                 }
                 SelectorComponent::Compound(_) => {
                     // Two compounds in a row - malformed selector
@@ -306,10 +313,7 @@ fn has_class(class_attr: Option<&str>, class_name: &str) -> bool {
 }
 
 /// Checks if an attribute selector matches an element's attributes.
-fn matches_attribute(
-    selector: &AttributeSelector,
-    elem_data: &vw_dom::ElementData,
-) -> bool {
+fn matches_attribute(selector: &AttributeSelector, elem_data: &vw_dom::ElementData) -> bool {
     let value = elem_data.get_attribute(&selector.name);
 
     match (&selector.matcher, value) {
@@ -358,7 +362,9 @@ fn matches_pseudo_class<C: PseudoClassContext>(
         PseudoClass::Empty => is_empty(element, document),
         PseudoClass::FirstChild => is_first_child(element, document),
         PseudoClass::LastChild => is_last_child(element, document),
-        PseudoClass::OnlyChild => is_first_child(element, document) && is_last_child(element, document),
+        PseudoClass::OnlyChild => {
+            is_first_child(element, document) && is_last_child(element, document)
+        }
         PseudoClass::FirstOfType => is_first_of_type(element, document),
         PseudoClass::LastOfType => is_last_of_type(element, document),
         PseudoClass::OnlyOfType => {
@@ -584,10 +590,8 @@ mod tests {
                 ("id".to_string(), "main".to_string()),
             ],
         );
-        let div1 = doc.create_element_with_attributes(
-            "div",
-            vec![("class".to_string(), "item".to_string())],
-        );
+        let div1 = doc
+            .create_element_with_attributes("div", vec![("class".to_string(), "item".to_string())]);
         let div2 = doc.create_element_with_attributes(
             "div",
             vec![("class".to_string(), "item active".to_string())],

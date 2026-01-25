@@ -170,7 +170,6 @@ impl LengthUnit {
     }
 }
 
-
 impl fmt::Display for LengthUnit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
@@ -382,7 +381,10 @@ mod tests {
     fn parse_named_color() {
         assert_eq!(Color::from_name("red"), Some(Color::rgb(255, 0, 0)));
         assert_eq!(Color::from_name("blue"), Some(Color::rgb(0, 0, 255)));
-        assert_eq!(Color::from_name("transparent"), Some(Color::rgba(0, 0, 0, 0.0)));
+        assert_eq!(
+            Color::from_name("transparent"),
+            Some(Color::rgba(0, 0, 0, 0.0))
+        );
     }
 
     #[test]

@@ -6,9 +6,7 @@
 //! - B = count of class selectors, attribute selectors, and pseudo-classes
 //! - C = count of type selectors and pseudo-elements
 
-use crate::selector::{
-    CompoundSelector, PseudoClass, Selector, SelectorComponent, TypeSelector,
-};
+use crate::selector::{CompoundSelector, PseudoClass, Selector, SelectorComponent, TypeSelector};
 
 /// CSS selector specificity.
 ///

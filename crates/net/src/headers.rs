@@ -36,7 +36,9 @@ impl Headers {
 
     /// Get a header value by name (case-insensitive)
     pub fn get(&self, name: &str) -> Option<&str> {
-        self.inner.get(&name.to_lowercase()).map(|(_, v)| v.as_str())
+        self.inner
+            .get(&name.to_lowercase())
+            .map(|(_, v)| v.as_str())
     }
 
     /// Check if a header exists

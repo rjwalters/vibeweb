@@ -5,14 +5,14 @@
 //! nodes are stored in a vector and referenced by indices, avoiding the
 //! complexity of Rc<RefCell<Node>> patterns.
 
-mod node;
 mod document;
+mod node;
 mod traverse;
 mod debug;
 
-pub use node::{Node, NodeData, NodeId, ElementData};
 pub use document::Document;
-pub use traverse::{ChildIter, DescendantIter, Ancestors};
+pub use node::{ElementData, Node, NodeData, NodeId};
+pub use traverse::{Ancestors, ChildIter, DescendantIter};
 
 #[cfg(test)]
 mod tests;
