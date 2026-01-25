@@ -5,3 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+thiserror = "2"
+vw-tls = { path = "../tls" }
+
+[dev-dependencies]
