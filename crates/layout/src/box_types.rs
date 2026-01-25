@@ -308,11 +308,12 @@ mod tests {
 
     #[test]
     fn test_dimensions_boxes() {
-        let mut dims = Dimensions::default();
-        dims.content = Rect::new(50.0, 50.0, 100.0, 100.0);
-        dims.padding = Edges::uniform(10.0);
-        dims.border = Edges::uniform(5.0);
-        dims.margin = Edges::uniform(20.0);
+        let dims = Dimensions {
+            content: Rect::new(50.0, 50.0, 100.0, 100.0),
+            padding: Edges::uniform(10.0),
+            border: Edges::uniform(5.0),
+            margin: Edges::uniform(20.0),
+        };
 
         let padding_box = dims.padding_box();
         assert_eq!(padding_box.x, 40.0);
