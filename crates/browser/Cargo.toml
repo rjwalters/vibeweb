@@ -9,3 +9,6 @@ name = "browser"
 path = "src/main.rs"
 
 [dependencies]
+vw-platform.workspace = true
+vw-gfx.workspace = true
+softbuffer.workspace = true

@@ -38,3 +38,8 @@ vw-platform = { path = "crates/platform" }
 vw-image = { path = "crates/image" }
 vw-fonts = { path = "crates/fonts" }
 harness = { path = "tools/harness" }
+
+# External dependencies
+winit = "0.30"
+softbuffer = "0.4"
+thiserror = "2"
