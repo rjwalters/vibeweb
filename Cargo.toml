@@ -1,0 +1,40 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "crates/browser",
+    "crates/net",
+    "crates/tls",
+    "crates/html",
+    "crates/dom",
+    "crates/css",
+    "crates/style",
+    "crates/layout",
+    "crates/gfx",
+    "crates/platform",
+    "crates/image",
+    "crates/fonts",
+    "tools/harness",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rjwalters/vibeweb"
+
+[workspace.dependencies]
+# Internal crates
+browser = { path = "crates/browser" }
+vw-net = { path = "crates/net" }
+vw-tls = { path = "crates/tls" }
+vw-html = { path = "crates/html" }
+vw-dom = { path = "crates/dom" }
+vw-css = { path = "crates/css" }
+vw-style = { path = "crates/style" }
+vw-layout = { path = "crates/layout" }
+vw-gfx = { path = "crates/gfx" }
+vw-platform = { path = "crates/platform" }
+vw-image = { path = "crates/image" }
+vw-fonts = { path = "crates/fonts" }
+harness = { path = "tools/harness" }
