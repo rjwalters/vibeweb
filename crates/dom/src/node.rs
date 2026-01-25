@@ -57,6 +57,13 @@ impl ElementData {
             self.attributes.push((name, value));
         }
     }
+
+    /// Returns true if this element has a specific class.
+    pub fn has_class(&self, class: &str) -> bool {
+        self.get_attribute("class")
+            .map(|classes| classes.split_whitespace().any(|c| c == class))
+            .unwrap_or(false)
+    }
 }
 
 /// The type-specific data stored in a DOM node.
@@ -173,6 +180,16 @@ mod tests {
         elem.set_attribute("class", "wrapper");
         assert_eq!(elem.get_attribute("class"), Some("wrapper"));
         assert_eq!(elem.attributes.len(), 1);
+    }
+
+    #[test]
+    fn test_has_class() {
+        let mut elem = ElementData::new("div");
+        elem.set_attribute("class", "foo bar baz");
+        assert!(elem.has_class("foo"));
+        assert!(elem.has_class("bar"));
+        assert!(elem.has_class("baz"));
+        assert!(!elem.has_class("qux"));
     }
 
     #[test]

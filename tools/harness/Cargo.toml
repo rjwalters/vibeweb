@@ -9,3 +9,5 @@ name = "harness"
 path = "src/main.rs"
 
 [dependencies]
+vw-dom.workspace = true
+vw-html.workspace = true

@@ -8,6 +8,7 @@
 mod node;
 mod document;
 mod traverse;
+mod debug;
 
 pub use node::{Node, NodeData, NodeId, ElementData};
 pub use document::Document;
