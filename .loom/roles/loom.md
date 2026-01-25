@@ -167,10 +167,16 @@ In Manual Orchestration Mode, use the **Task tool with `run_in_background: true`
 ```
 Task(
   subagent_type: "general-purpose",
-  prompt: "/shepherd 123 --force-pr",
+  prompt: """Execute the shepherd workflow by invoking the Skill tool:
+
+Skill(skill="shepherd", args="123 --force-pr")
+
+Follow all shepherd workflow steps until the issue is complete or blocked.""",
   run_in_background: true
 ) → Returns task_id and output_file
 ```
+
+**IMPORTANT**: Task subagents don't automatically interpret slash commands (like `/shepherd`) as Skill invocations. They see the prompt as plain text. You MUST explicitly instruct the subagent to use the Skill tool with `Skill(skill="...", args="...")` syntax.
 
 ## Iteration Mode (`/loom iterate`)
 
@@ -399,18 +405,27 @@ The daemon AUTOMATICALLY spawns shepherds without asking:
 # This happens automatically every iteration - no human approval needed
 def auto_spawn_shepherds():
     active_count = count_active_shepherds()
-    ready_issues = get_ready_issues()  # loom:issue labeled
+    # ready_issues is pre-sorted by daemon-snapshot.sh based on LOOM_ISSUE_STRATEGY:
+    # - loom:urgent issues always come first (highest priority)
+    # - Remaining issues sorted by strategy: fifo (oldest first), lifo (newest first), or priority
+    ready_issues = get_ready_issues()  # loom:issue labeled, priority-sorted
 
     while active_count < MAX_SHEPHERDS and len(ready_issues) > 0:
-        issue = ready_issues.pop(0)
+        issue = ready_issues.pop(0)  # Takes highest priority issue
 
         # Claim immediately
         gh issue edit {issue} --remove-label "loom:issue" --add-label "loom:building"
 
         # Spawn shepherd subagent
+        # NOTE: We must explicitly instruct the subagent to use the Skill tool
+        # because Task subagents don't automatically interpret slash commands.
         Task(
             description=f"Shepherd issue #{issue}",
-            prompt=f"/shepherd {issue} --force-pr",
+            prompt=f"""Execute the shepherd workflow by invoking the Skill tool:
+
+Skill(skill="shepherd", args="{issue} --force-pr")
+
+Follow all shepherd workflow steps until the issue is complete or blocked.""",
             run_in_background=True
         )
 
@@ -436,7 +451,11 @@ def auto_generate_work():
         if architect_cooldown_ok() and architect_proposals < 2:
             Task(
                 description="Architect work generation",
-                prompt="/architect --autonomous",
+                prompt="""Execute the architect role by invoking the Skill tool:
+
+Skill(skill="architect", args="--autonomous")
+
+Complete one work generation iteration.""",
                 run_in_background=True
             )
             update_last_architect_trigger()
@@ -446,7 +465,11 @@ def auto_generate_work():
         if hermit_cooldown_ok() and hermit_proposals < 2:
             Task(
                 description="Hermit simplification proposals",
-                prompt="/hermit",
+                prompt="""Execute the hermit role by invoking the Skill tool:
+
+Skill(skill="hermit")
+
+Complete one simplification analysis iteration.""",
                 run_in_background=True
             )
             update_last_hermit_trigger()
@@ -464,7 +487,11 @@ def auto_ensure_support_roles():
     if not guide_is_running() or guide_idle_time() > GUIDE_INTERVAL:
         Task(
             description="Guide backlog triage",
-            prompt="/guide",
+            prompt="""Execute the guide role by invoking the Skill tool:
+
+Skill(skill="guide")
+
+Complete one triage iteration.""",
             run_in_background=True
         )
         print("AUTO-SPAWNED Guide")
@@ -473,7 +500,11 @@ def auto_ensure_support_roles():
     if not champion_is_running() or champion_idle_time() > CHAMPION_INTERVAL:
         Task(
             description="Champion PR merge",
-            prompt="/champion",
+            prompt="""Execute the champion role by invoking the Skill tool:
+
+Skill(skill="champion")
+
+Complete one PR evaluation and merge iteration.""",
             run_in_background=True
         )
         print("AUTO-SPAWNED Champion")
@@ -482,7 +513,11 @@ def auto_ensure_support_roles():
     if not doctor_is_running() or doctor_idle_time() > DOCTOR_INTERVAL:
         Task(
             description="Doctor PR conflict resolution",
-            prompt="/doctor",
+            prompt="""Execute the doctor role by invoking the Skill tool:
+
+Skill(skill="doctor")
+
+Complete one PR conflict resolution iteration.""",
             run_in_background=True
         )
         print("AUTO-SPAWNED Doctor")
@@ -906,20 +941,29 @@ return f"ready={len(ready_issues)} building={len(building_issues)} ..."
 def auto_spawn_shepherds():
     """Automatically spawn shepherds - NO human decision required."""
 
-    ready_issues = gh_list_issues_with_label("loom:issue")
+    # daemon-snapshot.sh returns issues pre-sorted by LOOM_ISSUE_STRATEGY:
+    # - loom:urgent issues always first (regardless of strategy)
+    # - Then sorted by: fifo (oldest first), lifo (newest first), or priority
+    ready_issues = gh_list_issues_with_label("loom:issue")  # Pre-sorted by priority
     active_count = count_active_shepherds()
 
     spawned = 0
     while active_count < MAX_SHEPHERDS and len(ready_issues) > 0:
-        issue = ready_issues.pop(0)
+        issue = ready_issues.pop(0)  # Highest priority issue
 
         # Claim immediately (atomic operation)
         gh issue edit {issue} --remove-label "loom:issue" --add-label "loom:building"
 
         # Spawn shepherd
+        # NOTE: We must explicitly instruct the subagent to use the Skill tool
+        # because Task subagents don't automatically interpret slash commands.
         result = Task(
             description=f"Shepherd issue #{issue}",
-            prompt=f"/shepherd {issue} --force-pr",
+            prompt=f"""Execute the shepherd workflow by invoking the Skill tool:
+
+Skill(skill="shepherd", args="{issue} --force-pr")
+
+Follow all shepherd workflow steps until the issue is complete or blocked.""",
             run_in_background=True
         )
 
@@ -957,7 +1001,11 @@ def auto_generate_work():
     if architect_proposals < MAX_ARCHITECT_PROPOSALS and architect_elapsed > ARCHITECT_COOLDOWN:
         result = Task(
             description="Architect work generation",
-            prompt="/architect --autonomous",
+            prompt="""Execute the architect role by invoking the Skill tool:
+
+Skill(skill="architect", args="--autonomous")
+
+Complete one work generation iteration.""",
             run_in_background=True
         )
         record_support_role("architect", result.task_id, result.output_file)
@@ -974,7 +1022,11 @@ def auto_generate_work():
     if hermit_proposals < MAX_HERMIT_PROPOSALS and hermit_elapsed > HERMIT_COOLDOWN:
         result = Task(
             description="Hermit simplification proposals",
-            prompt="/hermit",
+            prompt="""Execute the hermit role by invoking the Skill tool:
+
+Skill(skill="hermit")
+
+Complete one simplification analysis iteration.""",
             run_in_background=True
         )
         record_support_role("hermit", result.task_id, result.output_file)
@@ -998,7 +1050,11 @@ def auto_ensure_support_roles():
     if not guide_running or guide_idle > GUIDE_INTERVAL:
         result = Task(
             description="Guide backlog triage",
-            prompt="/guide",
+            prompt="""Execute the guide role by invoking the Skill tool:
+
+Skill(skill="guide")
+
+Complete one triage iteration.""",
             run_in_background=True
         )
         record_support_role("guide", result.task_id, result.output_file)
@@ -1014,7 +1070,11 @@ def auto_ensure_support_roles():
     if not champion_running or champion_idle > CHAMPION_INTERVAL:
         result = Task(
             description="Champion PR merge",
-            prompt="/champion",
+            prompt="""Execute the champion role by invoking the Skill tool:
+
+Skill(skill="champion")
+
+Complete one PR evaluation and merge iteration.""",
             run_in_background=True
         )
         record_support_role("champion", result.task_id, result.output_file)
@@ -1030,7 +1090,11 @@ def auto_ensure_support_roles():
     if not doctor_running or doctor_idle > DOCTOR_INTERVAL:
         result = Task(
             description="Doctor PR conflict resolution",
-            prompt="/doctor",
+            prompt="""Execute the doctor role by invoking the Skill tool:
+
+Skill(skill="doctor")
+
+Complete one PR conflict resolution iteration.""",
             run_in_background=True
         )
         record_support_role("doctor", result.task_id, result.output_file)
