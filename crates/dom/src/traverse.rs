@@ -33,8 +33,6 @@ impl<'a> Iterator for ChildIter<'a> {
 /// Iterator over all descendants of a node in depth-first pre-order.
 pub struct DescendantIter<'a> {
     doc: &'a Document,
-    #[allow(dead_code)]
-    root: NodeId,
     stack: Vec<NodeId>,
 }
 
@@ -48,7 +46,7 @@ impl<'a> DescendantIter<'a> {
                 stack.push(first_child);
             }
         }
-        Self { doc, root, stack }
+        Self { doc, stack }
     }
 }
 
