@@ -114,6 +114,43 @@ impl Color {
     pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
+
+    /// Blend this color over another using the "over" compositing operation.
+    ///
+    /// Uses the alpha value of `self` (the source) to blend over `dst` (destination).
+    /// Formula: out = src * alpha + dst * (1 - alpha)
+    ///
+    /// # Arguments
+    ///
+    /// * `dst` - The destination (background) color
+    ///
+    /// # Returns
+    ///
+    /// The blended color with alpha = 255 (fully opaque).
+    #[inline]
+    pub fn blend_over(self, dst: Color) -> Color {
+        let alpha = self.a as u32;
+        let inv_alpha = 255 - alpha;
+
+        let r = (self.r as u32 * alpha + dst.r as u32 * inv_alpha) / 255;
+        let g = (self.g as u32 * alpha + dst.g as u32 * inv_alpha) / 255;
+        let b = (self.b as u32 * alpha + dst.b as u32 * inv_alpha) / 255;
+
+        Color::rgb(r as u8, g as u8, b as u8)
+    }
+
+    /// Create a copy of this color with the specified alpha value.
+    ///
+    /// Useful for creating semi-transparent versions of colors.
+    #[inline]
+    pub const fn with_alpha(self, alpha: u8) -> Color {
+        Color {
+            r: self.r,
+            g: self.g,
+            b: self.b,
+            a: alpha,
+        }
+    }
 }
 
 impl Default for Color {
@@ -168,5 +205,40 @@ mod tests {
         let argb = original.to_argb();
         let restored = Color::from_argb(argb);
         assert_eq!(original, restored);
+    }
+
+    #[test]
+    fn color_blend_over_opaque() {
+        // Opaque red over white should give red
+        let result = Color::RED.blend_over(Color::WHITE);
+        assert_eq!(result, Color::RED);
+    }
+
+    #[test]
+    fn color_blend_over_transparent() {
+        // Fully transparent over white should give white
+        let result = Color::TRANSPARENT.blend_over(Color::WHITE);
+        assert_eq!(result, Color::WHITE);
+    }
+
+    #[test]
+    fn color_blend_over_50_percent() {
+        // 50% black over white
+        let black_50 = Color::BLACK.with_alpha(128);
+        let result = black_50.blend_over(Color::WHITE);
+        // 0 * 128/255 + 255 * 127/255 = 127
+        assert_eq!(result.r, 127);
+        assert_eq!(result.g, 127);
+        assert_eq!(result.b, 127);
+    }
+
+    #[test]
+    fn color_with_alpha() {
+        let red = Color::RED;
+        let semi_red = red.with_alpha(128);
+        assert_eq!(semi_red.r, 255);
+        assert_eq!(semi_red.g, 0);
+        assert_eq!(semi_red.b, 0);
+        assert_eq!(semi_red.a, 128);
     }
 }

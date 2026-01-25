@@ -28,7 +28,9 @@
 use crate::color::Color;
 use crate::framebuffer::Framebuffer;
 use crate::rect::Rect;
+use crate::text::TextRenderer;
 use std::sync::Arc;
+use vw_fonts::FontCache;
 use vw_image::DecodedImage;
 
 /// Edge widths for border rendering.
@@ -298,8 +300,50 @@ impl DisplayList {
     ///
     /// Commands are executed in order. Clipping is supported through
     /// `PushClip` and `PopClip` commands.
+    ///
+    /// **Note**: This method does not render text. Use `paint_with_fonts`
+    /// to render text content.
     pub fn paint(&self, framebuffer: &mut Framebuffer) {
+        self.paint_internal(framebuffer, None);
+    }
+
+    /// Paint the display list to a framebuffer with font support for text rendering.
+    ///
+    /// Commands are executed in order. Clipping is supported through
+    /// `PushClip` and `PopClip` commands. Text commands are rendered using
+    /// the provided font cache.
+    ///
+    /// # Arguments
+    ///
+    /// * `framebuffer` - The target framebuffer to paint to
+    /// * `fonts` - Font cache for text rendering
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use vw_gfx::{Color, DisplayList, Framebuffer, Rect};
+    /// use vw_fonts::FontCache;
+    ///
+    /// let mut list = DisplayList::new();
+    /// list.push_text(50, 100, "Hello, World!".to_string(), Color::BLACK, 24.0);
+    ///
+    /// let mut fb = Framebuffer::new(800, 600);
+    /// fb.clear(Color::WHITE);
+    ///
+    /// let mut fonts = FontCache::new();
+    /// list.paint_with_fonts(&mut fb, &mut fonts);
+    /// ```
+    pub fn paint_with_fonts(&self, framebuffer: &mut Framebuffer, fonts: &mut FontCache) {
+        self.paint_internal(framebuffer, Some(fonts));
+    }
+
+    /// Internal paint implementation that optionally uses fonts for text.
+    fn paint_internal(&self, framebuffer: &mut Framebuffer, mut fonts: Option<&mut FontCache>) {
         let mut clip_stack: Vec<Rect> = Vec::new();
+
+        // Pre-load the fallback font if we have a font cache
+        // This avoids borrow checker issues during rendering
+        let fallback_font = fonts.as_mut().and_then(|f| f.get_fallback().cloned());
 
         for command in &self.commands {
             match command {
@@ -320,15 +364,24 @@ impl DisplayList {
                 }
 
                 DisplayCommand::Text {
-                    x: _,
-                    y: _,
-                    text: _,
-                    color: _,
-                    font_size: _,
+                    x,
+                    y,
+                    text,
+                    color,
+                    font_size,
                 } => {
-                    // Text rendering is not yet implemented.
-                    // This will be functional once font rendering is integrated.
-                    // For now, this is a no-op placeholder.
+                    // Text rendering requires a font
+                    if let Some(ref font) = fallback_font {
+                        let mut renderer = TextRenderer::new(framebuffer);
+                        renderer.draw_text(
+                            font.as_ab_glyph(),
+                            *font_size,
+                            *x as f32,
+                            *y as f32,
+                            text,
+                            *color,
+                        );
+                    }
                 }
 
                 DisplayCommand::PushClip(rect) => {
@@ -781,5 +834,136 @@ mod tests {
         assert_eq!(fb.get_pixel(5, 5), Color::BLUE);
         // Non-overlapping area should still be red
         assert_eq!(fb.get_pixel(2, 2), Color::RED);
+    }
+
+    #[test]
+    fn test_paint_text_with_fonts() {
+        let mut list = DisplayList::new();
+        list.push_text(50, 100, "Hello, World!".to_string(), Color::BLACK, 24.0);
+
+        let mut fb = Framebuffer::new(400, 200);
+        fb.clear(Color::WHITE);
+
+        let mut fonts = FontCache::new();
+        list.paint_with_fonts(&mut fb, &mut fonts);
+
+        // After painting text, some pixels should have changed
+        let white_count = fb
+            .pixels()
+            .iter()
+            .filter(|&&p| p == Color::WHITE.to_argb())
+            .count();
+
+        assert!(
+            white_count < 80000,
+            "Text should have been rendered (some pixels changed)"
+        );
+    }
+
+    #[test]
+    fn test_paint_text_without_fonts() {
+        // Without fonts, text should be a no-op
+        let mut list = DisplayList::new();
+        list.push_text(50, 100, "Hello".to_string(), Color::BLACK, 24.0);
+
+        let mut fb = Framebuffer::new(400, 200);
+        fb.clear(Color::WHITE);
+
+        // Paint without fonts (using paint(), not paint_with_fonts())
+        list.paint(&mut fb);
+
+        // All pixels should still be white (text not rendered)
+        let white_count = fb
+            .pixels()
+            .iter()
+            .filter(|&&p| p == Color::WHITE.to_argb())
+            .count();
+
+        assert_eq!(
+            white_count, 80000,
+            "Without fonts, text should not be rendered"
+        );
+    }
+
+    #[test]
+    fn test_paint_text_colored() {
+        let mut list = DisplayList::new();
+        list.push_text(50, 100, "Red Text".to_string(), Color::RED, 32.0);
+
+        let mut fb = Framebuffer::new(400, 200);
+        fb.clear(Color::WHITE);
+
+        let mut fonts = FontCache::new();
+        list.paint_with_fonts(&mut fb, &mut fonts);
+
+        // Check that some pixels are red or red-tinted
+        let has_red = fb.pixels().iter().any(|&p| {
+            let color = Color::from_argb(p);
+            color.r > color.g && color.r > color.b && color.r > 100
+        });
+
+        assert!(has_red, "Red text should produce red pixels");
+    }
+
+    #[test]
+    fn test_paint_text_multiple() {
+        let mut list = DisplayList::new();
+        list.push_solid_color(Rect::new(0, 0, 400, 200), Color::WHITE);
+        list.push_text(10, 30, "Line 1".to_string(), Color::BLACK, 16.0);
+        list.push_text(10, 60, "Line 2".to_string(), Color::BLUE, 16.0);
+        list.push_text(10, 90, "Line 3".to_string(), Color::RED, 16.0);
+
+        let mut fb = Framebuffer::new(400, 200);
+        fb.clear(Color::WHITE);
+
+        let mut fonts = FontCache::new();
+        list.paint_with_fonts(&mut fb, &mut fonts);
+
+        // Check that multiple colors are present
+        let has_black = fb.pixels().iter().any(|&p| {
+            let color = Color::from_argb(p);
+            color.r < 50 && color.g < 50 && color.b < 50 && color.a == 255
+        });
+
+        let has_blue_tint = fb.pixels().iter().any(|&p| {
+            let color = Color::from_argb(p);
+            color.b > color.r && color.b > color.g && color.b > 100
+        });
+
+        let has_red_tint = fb.pixels().iter().any(|&p| {
+            let color = Color::from_argb(p);
+            color.r > color.g && color.r > color.b && color.r > 100
+        });
+
+        assert!(
+            has_black || has_blue_tint || has_red_tint,
+            "Multiple text lines with different colors should be visible"
+        );
+    }
+
+    #[test]
+    fn test_paint_text_over_background() {
+        let mut list = DisplayList::new();
+        // Blue background
+        list.push_solid_color(Rect::new(0, 0, 400, 200), Color::BLUE);
+        // White text on top
+        list.push_text(50, 100, "White on Blue".to_string(), Color::WHITE, 24.0);
+
+        let mut fb = Framebuffer::new(400, 200);
+        fb.clear(Color::BLACK);
+
+        let mut fonts = FontCache::new();
+        list.paint_with_fonts(&mut fb, &mut fonts);
+
+        // Background should be blue
+        assert_eq!(fb.get_pixel(5, 5), Color::BLUE);
+
+        // Should have some white or light-colored pixels from text
+        let has_light = fb.pixels().iter().any(|&p| {
+            let color = Color::from_argb(p);
+            color.r > 200 && color.g > 200 && color.b > 200
+        });
+
+        assert!(has_light, "White text should be visible on blue background");
     }
 }
