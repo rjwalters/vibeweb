@@ -85,6 +85,15 @@ fn main() {
                 Event::CloseRequested => {
                     println!("Window close requested, exiting...");
                 }
+
+                // Input events (will be handled in M5 - Navigation UX)
+                Event::MouseMoved { .. }
+                | Event::MouseButton { .. }
+                | Event::MouseWheel { .. }
+                | Event::KeyboardInput { .. }
+                | Event::CharacterInput { .. } => {
+                    // TODO: Handle input events for interactive features
+                }
             }
         })
         .expect("Event loop error");

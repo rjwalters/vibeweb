@@ -8,7 +8,7 @@ pub mod event;
 pub mod window;
 
 pub use error::PlatformError;
-pub use event::Event;
+pub use event::{ElementState, Event, KeyCode, Modifiers, MouseButton};
 pub use window::{Window, WindowConfig, WindowContext};
 
 /// Re-export winit window type for softbuffer integration
