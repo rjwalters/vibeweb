@@ -78,7 +78,7 @@ impl Response {
                 NetError::InvalidResponse(format!("failed to read header: {}", e))
             })?;
 
-            let line = line.trim_end_matches(|c| c == '\r' || c == '\n');
+            let line = line.trim_end_matches(['\r', '\n']);
 
             if line.is_empty() {
                 break;

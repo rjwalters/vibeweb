@@ -112,8 +112,7 @@ impl Url {
         let host = authority[1..close_bracket].to_string(); // Strip brackets
         let after_bracket = &authority[close_bracket + 1..];
 
-        let port = if after_bracket.starts_with(':') {
-            let port_str = &after_bracket[1..];
+        let port = if let Some(port_str) = after_bracket.strip_prefix(':') {
             Some(
                 port_str
                     .parse::<u16>()
