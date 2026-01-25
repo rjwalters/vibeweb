@@ -146,41 +146,6 @@ impl RuleMatcher for DefaultMatcher {
     }
 }
 
-/// A rule matcher that combines multiple matchers.
-pub struct CombinedMatcher<'a> {
-    matchers: Vec<&'a dyn RuleMatcher>,
-}
-
-impl<'a> CombinedMatcher<'a> {
-    /// Create a new combined matcher.
-    pub fn new() -> Self {
-        CombinedMatcher {
-            matchers: Vec::new(),
-        }
-    }
-
-    /// Add a matcher to the chain.
-    pub fn add(&mut self, matcher: &'a dyn RuleMatcher) {
-        self.matchers.push(matcher);
-    }
-}
-
-impl<'a> Default for CombinedMatcher<'a> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a> RuleMatcher for CombinedMatcher<'a> {
-    fn match_rules(&self, node: &NodeInfo) -> Vec<MatchedRule> {
-        let mut all_rules = Vec::new();
-        for matcher in &self.matchers {
-            all_rules.extend(matcher.match_rules(node));
-        }
-        all_rules
-    }
-}
-
 /// Style tree builder that computes styles for a document.
 pub struct StyleTreeBuilder<'a, M: RuleMatcher> {
     matcher: &'a M,
