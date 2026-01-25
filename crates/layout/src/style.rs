@@ -10,20 +10,15 @@ use crate::box_types::NodeId;
 use std::collections::HashMap;
 
 /// A computed length value in pixels.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum Length {
     /// Absolute length in pixels
     Px(f32),
     /// Percentage of containing block
     Percent(f32),
     /// Auto (browser computes the value)
+    #[default]
     Auto,
-}
-
-impl Default for Length {
-    fn default() -> Self {
-        Length::Auto
-    }
 }
 
 impl Length {
@@ -150,20 +145,15 @@ impl Default for ComputedStyle {
 }
 
 /// Line height value.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum LineHeight {
     /// Normal line height (typically 1.2)
+    #[default]
     Normal,
     /// Unitless multiplier (e.g., 1.5)
     Number(f32),
     /// Absolute length in pixels
     Px(f32),
-}
-
-impl Default for LineHeight {
-    fn default() -> Self {
-        LineHeight::Normal
-    }
 }
 
 impl LineHeight {
