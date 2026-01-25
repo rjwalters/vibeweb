@@ -75,7 +75,12 @@ mod tests {
         LayoutBox {
             box_type: BoxType::Block,
             dimensions: Dimensions {
-                content: super::LayoutRect { x, y, width, height },
+                content: super::LayoutRect {
+                    x,
+                    y,
+                    width,
+                    height,
+                },
                 ..Default::default()
             },
             children: Vec::new(),

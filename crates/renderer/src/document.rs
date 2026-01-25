@@ -263,7 +263,8 @@ fn convert_style(vw_style: &VwComputedStyle) -> LayoutComputedStyle {
     // Handle border widths
     let border_top_width = length_to_px(&vw_style.border_width.top, font_size, root_font_size);
     let border_right_width = length_to_px(&vw_style.border_width.right, font_size, root_font_size);
-    let border_bottom_width = length_to_px(&vw_style.border_width.bottom, font_size, root_font_size);
+    let border_bottom_width =
+        length_to_px(&vw_style.border_width.bottom, font_size, root_font_size);
     let border_left_width = length_to_px(&vw_style.border_width.left, font_size, root_font_size);
 
     // Handle line height (vw_style::LineHeight::Length already contains px value)
@@ -315,8 +316,9 @@ impl<'a> AuthorStyleMatcher<'a> {
 impl<'a> RuleMatcher for AuthorStyleMatcher<'a> {
     fn match_rules(&self, node: &NodeInfo) -> Vec<vw_style::MatchedRule> {
         // Start with UA defaults
-        let rules =
-            vw_style::defaults::user_agent_rules_for_element(node.tag_name.as_deref().unwrap_or(""));
+        let rules = vw_style::defaults::user_agent_rules_for_element(
+            node.tag_name.as_deref().unwrap_or(""),
+        );
 
         // TODO: Add author style matching when vw-css selector matching is wired up
         // For now, we only use UA defaults (self.stylesheet and self.dom will be

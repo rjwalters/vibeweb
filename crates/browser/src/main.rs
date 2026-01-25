@@ -51,8 +51,8 @@ fn main() {
     let mut graphics: Option<GraphicsState> = None;
 
     // Create the browser with a default document
-    let mut browser = Browser::new(DEFAULT_HTML, DEFAULT_CSS, 800, 600)
-        .expect("Failed to create browser");
+    let mut browser =
+        Browser::new(DEFAULT_HTML, DEFAULT_CSS, 800, 600).expect("Failed to create browser");
 
     // Run the event loop
     window

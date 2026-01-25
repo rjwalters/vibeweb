@@ -150,7 +150,8 @@ mod tests {
 
     #[test]
     fn test_browser_paint() {
-        let mut browser = Browser::new("<html><body><p>Hello</p></body></html>", "", 800, 600).unwrap();
+        let mut browser =
+            Browser::new("<html><body><p>Hello</p></body></html>", "", 800, 600).unwrap();
         let mut fb = Framebuffer::new(800, 600);
 
         browser.paint(&mut fb);
