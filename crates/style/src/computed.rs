@@ -14,7 +14,6 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq)]
 pub struct ComputedStyle {
     // === Box Model ===
-
     /// The display property determines how the element generates boxes.
     pub display: Display,
 
@@ -52,7 +51,6 @@ pub struct ComputedStyle {
     pub box_sizing: BoxSizing,
 
     // === Colors ===
-
     /// Foreground (text) color.
     pub color: Color,
 
@@ -63,7 +61,6 @@ pub struct ComputedStyle {
     pub border_color: Color,
 
     // === Typography ===
-
     /// Font size in pixels (always resolved to px).
     pub font_size: f32,
 
@@ -83,7 +80,6 @@ pub struct ComputedStyle {
     pub white_space: WhiteSpace,
 
     // === Positioning ===
-
     /// Top offset for positioned elements.
     pub top: LengthOrAuto,
 
@@ -100,7 +96,6 @@ pub struct ComputedStyle {
     pub z_index: Option<i32>,
 
     // === Visual ===
-
     /// Overflow handling.
     pub overflow_x: Overflow,
     pub overflow_y: Overflow,
@@ -112,7 +107,6 @@ pub struct ComputedStyle {
     pub opacity: f32,
 
     // === Float ===
-
     /// Float property.
     pub float: Float,
 

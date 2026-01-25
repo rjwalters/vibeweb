@@ -26,7 +26,10 @@ fn test_full_html_document() {
 
     // Verify basic structure
     let html_elem = doc.document_element().unwrap();
-    assert_eq!(doc.get(html_elem).unwrap().as_element().unwrap().tag_name, "html");
+    assert_eq!(
+        doc.get(html_elem).unwrap().as_element().unwrap().tag_name,
+        "html"
+    );
 
     // Check head
     let head = doc.get_element_by_tag_name("head").unwrap();
@@ -46,7 +49,8 @@ fn test_full_html_document() {
 
     // Check list items
     let ul = doc.get_element_by_tag_name("ul").unwrap();
-    let li_count = doc.children(ul)
+    let li_count = doc
+        .children(ul)
         .filter(|&id| {
             doc.get(id)
                 .and_then(|n| n.as_element())
@@ -90,7 +94,8 @@ fn test_self_closing_elements() {
     let p = doc.get_element_by_tag_name("p").unwrap();
 
     // Count br elements under p
-    let br_count = doc.descendants(p)
+    let br_count = doc
+        .descendants(p)
         .filter(|&id| {
             doc.get(id)
                 .and_then(|n| n.as_element())
@@ -119,7 +124,8 @@ fn test_form_elements() {
     assert_eq!(form_elem.get_attribute("method"), Some("post"));
 
     // Count input elements
-    let input_count = doc.descendants(form)
+    let input_count = doc
+        .descendants(form)
         .filter(|&id| {
             doc.get(id)
                 .and_then(|n| n.as_element())
@@ -175,7 +181,8 @@ fn test_deeply_nested() {
     assert_eq!(doc.text_content(p), "Deep");
 
     // Count ancestor divs
-    let div_count = doc.ancestors(p)
+    let div_count = doc
+        .ancestors(p)
         .filter(|&id| {
             doc.get(id)
                 .and_then(|n| n.as_element())
@@ -192,7 +199,8 @@ fn test_comments_preserved() {
 
     let div = doc.get_element_by_tag_name("div").unwrap();
 
-    let comment_count = doc.children(div)
+    let comment_count = doc
+        .children(div)
         .filter(|&id| {
             doc.get(id)
                 .map(|n| matches!(n.data, NodeData::Comment(_)))

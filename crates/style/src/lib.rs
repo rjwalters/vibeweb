@@ -85,7 +85,9 @@ pub use properties::{
     BoxSizing, Clear, Display, Float, FontWeight, LineHeight, Overflow, Position, TextAlign,
     VerticalAlign, Visibility, WhiteSpace,
 };
-pub use tree::{compute_styles_default, NodeId, NodeInfo, RuleMatcher, StyleTree, StyleTreeBuilder};
+pub use tree::{
+    compute_styles_default, NodeId, NodeInfo, RuleMatcher, StyleTree, StyleTreeBuilder,
+};
 pub use values::{Color, Length, LengthOrAuto, Sides};
 
 #[cfg(test)]
@@ -160,9 +162,8 @@ mod tests {
 
         impl RuleMatcher for AuthorMatcher {
             fn match_rules(&self, node: &NodeInfo) -> Vec<MatchedRule> {
-                let mut rules = defaults::user_agent_rules_for_element(
-                    node.tag_name.as_deref().unwrap_or(""),
-                );
+                let mut rules =
+                    defaults::user_agent_rules_for_element(node.tag_name.as_deref().unwrap_or(""));
 
                 // Add author rule: all divs are red
                 if node.tag_name.as_deref() == Some("div") {

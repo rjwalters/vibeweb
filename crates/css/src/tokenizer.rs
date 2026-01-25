@@ -279,7 +279,10 @@ impl<'a> Tokenizer<'a> {
         // Return whitespace token if we had significant whitespace
         // (We collapse all whitespace into a single token for simplicity,
         // but only emit it when it's between other tokens)
-        if had_whitespace && self.peek().is_some() && !matches!(self.peek(), Some('{') | Some('}') | Some(';')) {
+        if had_whitespace
+            && self.peek().is_some()
+            && !matches!(self.peek(), Some('{') | Some('}') | Some(';'))
+        {
             return Token {
                 kind: TokenKind::Whitespace,
                 start,
@@ -507,23 +510,32 @@ mod tests {
     #[test]
     fn tokenize_ident() {
         let tokens = tokenize("body");
-        assert_eq!(tokens, vec![TokenKind::Ident("body".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![TokenKind::Ident("body".to_string()), TokenKind::Eof]
+        );
     }
 
     #[test]
     fn tokenize_hash() {
         let tokens = tokenize("#main");
-        assert_eq!(tokens, vec![TokenKind::Hash("main".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![TokenKind::Hash("main".to_string()), TokenKind::Eof]
+        );
     }
 
     #[test]
     fn tokenize_class() {
         let tokens = tokenize(".container");
-        assert_eq!(tokens, vec![
-            TokenKind::Period,
-            TokenKind::Ident("container".to_string()),
-            TokenKind::Eof,
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                TokenKind::Period,
+                TokenKind::Ident("container".to_string()),
+                TokenKind::Eof,
+            ]
+        );
     }
 
     #[test]
@@ -541,7 +553,10 @@ mod tests {
     #[test]
     fn tokenize_dimension() {
         let tokens = tokenize("10px");
-        assert_eq!(tokens, vec![TokenKind::Dimension(10.0, "px".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![TokenKind::Dimension(10.0, "px".to_string()), TokenKind::Eof]
+        );
     }
 
     #[test]
@@ -553,68 +568,101 @@ mod tests {
     #[test]
     fn tokenize_string_double() {
         let tokens = tokenize(r#""hello""#);
-        assert_eq!(tokens, vec![TokenKind::String("hello".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![TokenKind::String("hello".to_string()), TokenKind::Eof]
+        );
     }
 
     #[test]
     fn tokenize_string_single() {
         let tokens = tokenize("'world'");
-        assert_eq!(tokens, vec![TokenKind::String("world".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![TokenKind::String("world".to_string()), TokenKind::Eof]
+        );
     }
 
     #[test]
     fn tokenize_function() {
         let tokens = tokenize("rgb(");
-        assert_eq!(tokens, vec![
-            TokenKind::Function("rgb".to_string()),
-            TokenKind::LeftParen,
-            TokenKind::Eof,
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                TokenKind::Function("rgb".to_string()),
+                TokenKind::LeftParen,
+                TokenKind::Eof,
+            ]
+        );
     }
 
     #[test]
     fn tokenize_at_keyword() {
         let tokens = tokenize("@media");
-        assert_eq!(tokens, vec![TokenKind::AtKeyword("media".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![TokenKind::AtKeyword("media".to_string()), TokenKind::Eof]
+        );
     }
 
     #[test]
     fn tokenize_simple_rule() {
         let tokens = tokenize("body { color: red; }");
-        assert_eq!(tokens, vec![
-            TokenKind::Ident("body".to_string()),
-            TokenKind::LeftBrace,
-            TokenKind::Ident("color".to_string()),
-            TokenKind::Colon,
-            TokenKind::Ident("red".to_string()),
-            TokenKind::Semicolon,
-            TokenKind::RightBrace,
-            TokenKind::Eof,
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                TokenKind::Ident("body".to_string()),
+                TokenKind::LeftBrace,
+                TokenKind::Ident("color".to_string()),
+                TokenKind::Colon,
+                TokenKind::Ident("red".to_string()),
+                TokenKind::Semicolon,
+                TokenKind::RightBrace,
+                TokenKind::Eof,
+            ]
+        );
     }
 
     #[test]
     fn tokenize_hex_color() {
         let tokens = tokenize("#ff0000");
-        assert_eq!(tokens, vec![TokenKind::Hash("ff0000".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![TokenKind::Hash("ff0000".to_string()), TokenKind::Eof]
+        );
     }
 
     #[test]
     fn tokenize_comment() {
         let tokens = tokenize("/* comment */ body");
-        assert_eq!(tokens, vec![TokenKind::Ident("body".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![TokenKind::Ident("body".to_string()), TokenKind::Eof]
+        );
     }
 
     #[test]
     fn tokenize_negative_number() {
         let tokens = tokenize("-10px");
-        assert_eq!(tokens, vec![TokenKind::Dimension(-10.0, "px".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![
+                TokenKind::Dimension(-10.0, "px".to_string()),
+                TokenKind::Eof
+            ]
+        );
     }
 
     #[test]
     fn tokenize_vendor_prefix() {
         let tokens = tokenize("-webkit-transform");
-        assert_eq!(tokens, vec![TokenKind::Ident("-webkit-transform".to_string()), TokenKind::Eof]);
+        assert_eq!(
+            tokens,
+            vec![
+                TokenKind::Ident("-webkit-transform".to_string()),
+                TokenKind::Eof
+            ]
+        );
     }
 
     #[test]
@@ -636,21 +684,27 @@ mod tests {
     #[test]
     fn tokenize_attribute_selector() {
         let tokens = tokenize("[disabled]");
-        assert_eq!(tokens, vec![
-            TokenKind::LeftBracket,
-            TokenKind::Ident("disabled".to_string()),
-            TokenKind::RightBracket,
-            TokenKind::Eof,
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                TokenKind::LeftBracket,
+                TokenKind::Ident("disabled".to_string()),
+                TokenKind::RightBracket,
+                TokenKind::Eof,
+            ]
+        );
     }
 
     #[test]
     fn tokenize_important() {
         let tokens = tokenize("!important");
-        assert_eq!(tokens, vec![
-            TokenKind::Exclamation,
-            TokenKind::Ident("important".to_string()),
-            TokenKind::Eof,
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                TokenKind::Exclamation,
+                TokenKind::Ident("important".to_string()),
+                TokenKind::Eof,
+            ]
+        );
     }
 }

@@ -65,9 +65,7 @@ impl Length {
             Length::Px(v) => *v,
             Length::Em(v) => *v * font_size,
             Length::Rem(v) => *v * root_font_size,
-            Length::Percent(v) => {
-                containing_size.map(|s| s * v / 100.0).unwrap_or(0.0)
-            }
+            Length::Percent(v) => containing_size.map(|s| s * v / 100.0).unwrap_or(0.0),
             Length::Zero => 0.0,
         }
     }
@@ -118,7 +116,12 @@ impl LengthOrAuto {
     }
 
     /// Try to resolve to pixels, returning None for auto.
-    pub fn to_px(&self, font_size: f32, root_font_size: f32, containing_size: Option<f32>) -> Option<f32> {
+    pub fn to_px(
+        &self,
+        font_size: f32,
+        root_font_size: f32,
+        containing_size: Option<f32>,
+    ) -> Option<f32> {
         match self {
             LengthOrAuto::Length(l) => Some(l.to_px(font_size, root_font_size, containing_size)),
             LengthOrAuto::Auto => None,
@@ -184,17 +187,29 @@ impl<T: Clone> Sides<T> {
 
     /// Create sides with explicit values for each side.
     pub fn new(top: T, right: T, bottom: T, left: T) -> Self {
-        Sides { top, right, bottom, left }
+        Sides {
+            top,
+            right,
+            bottom,
+            left,
+        }
     }
 }
 
 impl Sides<Length> {
     /// Resolve all sides to pixels.
-    pub fn to_px(&self, font_size: f32, root_font_size: f32, containing_size: Option<f32>) -> Sides<f32> {
+    pub fn to_px(
+        &self,
+        font_size: f32,
+        root_font_size: f32,
+        containing_size: Option<f32>,
+    ) -> Sides<f32> {
         Sides {
             top: self.top.to_px(font_size, root_font_size, containing_size),
             right: self.right.to_px(font_size, root_font_size, containing_size),
-            bottom: self.bottom.to_px(font_size, root_font_size, containing_size),
+            bottom: self
+                .bottom
+                .to_px(font_size, root_font_size, containing_size),
             left: self.left.to_px(font_size, root_font_size, containing_size),
         }
     }
@@ -202,12 +217,30 @@ impl Sides<Length> {
 
 impl Sides<LengthOrAuto> {
     /// Resolve all sides to pixels, using a default for auto values.
-    pub fn to_px_or(&self, font_size: f32, root_font_size: f32, containing_size: Option<f32>, default: f32) -> Sides<f32> {
+    pub fn to_px_or(
+        &self,
+        font_size: f32,
+        root_font_size: f32,
+        containing_size: Option<f32>,
+        default: f32,
+    ) -> Sides<f32> {
         Sides {
-            top: self.top.to_px(font_size, root_font_size, containing_size).unwrap_or(default),
-            right: self.right.to_px(font_size, root_font_size, containing_size).unwrap_or(default),
-            bottom: self.bottom.to_px(font_size, root_font_size, containing_size).unwrap_or(default),
-            left: self.left.to_px(font_size, root_font_size, containing_size).unwrap_or(default),
+            top: self
+                .top
+                .to_px(font_size, root_font_size, containing_size)
+                .unwrap_or(default),
+            right: self
+                .right
+                .to_px(font_size, root_font_size, containing_size)
+                .unwrap_or(default),
+            bottom: self
+                .bottom
+                .to_px(font_size, root_font_size, containing_size)
+                .unwrap_or(default),
+            left: self
+                .left
+                .to_px(font_size, root_font_size, containing_size)
+                .unwrap_or(default),
         }
     }
 }
@@ -230,11 +263,26 @@ impl Default for Color {
 
 impl Color {
     /// Fully transparent.
-    pub const TRANSPARENT: Color = Color { r: 0, g: 0, b: 0, a: 0 };
+    pub const TRANSPARENT: Color = Color {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 0,
+    };
     /// Black.
-    pub const BLACK: Color = Color { r: 0, g: 0, b: 0, a: 255 };
+    pub const BLACK: Color = Color {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 255,
+    };
     /// White.
-    pub const WHITE: Color = Color { r: 255, g: 255, b: 255, a: 255 };
+    pub const WHITE: Color = Color {
+        r: 255,
+        g: 255,
+        b: 255,
+        a: 255,
+    };
 
     /// Create a new color from RGB values (fully opaque).
     pub fn rgb(r: u8, g: u8, b: u8) -> Self {
@@ -272,7 +320,14 @@ impl fmt::Display for Color {
         if self.a == 255 {
             write!(f, "#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
         } else {
-            write!(f, "rgba({}, {}, {}, {})", self.r, self.g, self.b, self.a as f32 / 255.0)
+            write!(
+                f,
+                "rgba({}, {}, {}, {})",
+                self.r,
+                self.g,
+                self.b,
+                self.a as f32 / 255.0
+            )
         }
     }
 }
@@ -286,10 +341,19 @@ mod tests {
         let font_size = 16.0;
         let root_font_size = 16.0;
 
-        assert_eq!(Length::px(10.0).to_px(font_size, root_font_size, None), 10.0);
+        assert_eq!(
+            Length::px(10.0).to_px(font_size, root_font_size, None),
+            10.0
+        );
         assert_eq!(Length::em(2.0).to_px(font_size, root_font_size, None), 32.0);
-        assert_eq!(Length::rem(1.5).to_px(font_size, root_font_size, None), 24.0);
-        assert_eq!(Length::percent(50.0).to_px(font_size, root_font_size, Some(200.0)), 100.0);
+        assert_eq!(
+            Length::rem(1.5).to_px(font_size, root_font_size, None),
+            24.0
+        );
+        assert_eq!(
+            Length::percent(50.0).to_px(font_size, root_font_size, Some(200.0)),
+            100.0
+        );
         assert_eq!(Length::Zero.to_px(font_size, root_font_size, None), 0.0);
     }
 

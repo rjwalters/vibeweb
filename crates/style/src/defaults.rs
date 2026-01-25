@@ -14,18 +14,17 @@ pub fn default_display_for_element(tag_name: &str) -> Display {
         "html" | "body" | "div" | "article" | "section" | "nav" | "aside" | "header" | "footer"
         | "main" | "address" | "blockquote" | "figure" | "figcaption" | "hgroup" | "search"
         | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "pre" | "hr" | "form" | "fieldset"
-        | "legend" | "ol" | "ul" | "li" | "dl" | "dt" | "dd" | "table" | "caption"
-        | "thead" | "tbody" | "tfoot" | "tr" | "td" | "th" | "colgroup" | "col"
-        | "details" | "summary" | "dialog" | "menu" | "dir" | "center" | "noscript"
-        | "output" | "video" | "audio" | "canvas" | "map" | "object" | "iframe"
-        | "frameset" | "frame" => Display::Block,
+        | "legend" | "ol" | "ul" | "li" | "dl" | "dt" | "dd" | "table" | "caption" | "thead"
+        | "tbody" | "tfoot" | "tr" | "td" | "th" | "colgroup" | "col" | "details" | "summary"
+        | "dialog" | "menu" | "dir" | "center" | "noscript" | "output" | "video" | "audio"
+        | "canvas" | "map" | "object" | "iframe" | "frameset" | "frame" => Display::Block,
 
         // Inline elements
         "span" | "a" | "abbr" | "acronym" | "b" | "bdi" | "bdo" | "big" | "br" | "cite"
         | "code" | "data" | "del" | "dfn" | "em" | "i" | "ins" | "kbd" | "mark" | "meter"
         | "progress" | "q" | "rb" | "rp" | "rt" | "rtc" | "ruby" | "s" | "samp" | "small"
-        | "strike" | "strong" | "sub" | "sup" | "time" | "tt" | "u" | "var" | "wbr"
-        | "font" | "nobr" => Display::Inline,
+        | "strike" | "strong" | "sub" | "sup" | "time" | "tt" | "u" | "var" | "wbr" | "font"
+        | "nobr" => Display::Inline,
 
         // Inline-block elements
         "button" | "input" | "select" | "textarea" | "img" => Display::InlineBlock,
@@ -364,13 +363,59 @@ pub fn user_agent_rules_for_element(tag_name: &str) -> Vec<MatchedRule> {
 pub fn is_phrasing_content(tag_name: &str) -> bool {
     matches!(
         tag_name.to_lowercase().as_str(),
-        "a" | "abbr" | "area" | "audio" | "b" | "bdi" | "bdo" | "br" | "button" | "canvas"
-            | "cite" | "code" | "data" | "datalist" | "del" | "dfn" | "em" | "embed" | "i"
-            | "iframe" | "img" | "input" | "ins" | "kbd" | "label" | "map" | "mark" | "math"
-            | "meter" | "noscript" | "object" | "output" | "picture" | "progress" | "q"
-            | "ruby" | "s" | "samp" | "script" | "select" | "slot" | "small" | "span"
-            | "strong" | "sub" | "sup" | "svg" | "template" | "textarea" | "time" | "u"
-            | "var" | "video" | "wbr"
+        "a" | "abbr"
+            | "area"
+            | "audio"
+            | "b"
+            | "bdi"
+            | "bdo"
+            | "br"
+            | "button"
+            | "canvas"
+            | "cite"
+            | "code"
+            | "data"
+            | "datalist"
+            | "del"
+            | "dfn"
+            | "em"
+            | "embed"
+            | "i"
+            | "iframe"
+            | "img"
+            | "input"
+            | "ins"
+            | "kbd"
+            | "label"
+            | "map"
+            | "mark"
+            | "math"
+            | "meter"
+            | "noscript"
+            | "object"
+            | "output"
+            | "picture"
+            | "progress"
+            | "q"
+            | "ruby"
+            | "s"
+            | "samp"
+            | "script"
+            | "select"
+            | "slot"
+            | "small"
+            | "span"
+            | "strong"
+            | "sub"
+            | "sup"
+            | "svg"
+            | "template"
+            | "textarea"
+            | "time"
+            | "u"
+            | "var"
+            | "video"
+            | "wbr"
     )
 }
 
@@ -401,7 +446,10 @@ mod tests {
         assert_eq!(default_display_for_element("span"), Display::Inline);
         assert_eq!(default_display_for_element("button"), Display::InlineBlock);
         assert_eq!(default_display_for_element("head"), Display::None);
-        assert_eq!(default_display_for_element("custom-element"), Display::Inline);
+        assert_eq!(
+            default_display_for_element("custom-element"),
+            Display::Inline
+        );
     }
 
     #[test]

@@ -138,11 +138,7 @@ impl Client {
     }
 
     /// Execute HTTPS request over TLS
-    fn execute_https(
-        &self,
-        request: &Request,
-        stream: TcpStream,
-    ) -> Result<Response, NetError> {
+    fn execute_https(&self, request: &Request, stream: TcpStream) -> Result<Response, NetError> {
         // Establish TLS connection
         let mut tls_stream = TlsStream::connect(stream, &request.url.host)?;
 

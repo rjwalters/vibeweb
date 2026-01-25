@@ -64,9 +64,9 @@ impl Response {
 
         // Read status line
         let mut status_line = String::new();
-        buf_reader.read_line(&mut status_line).map_err(|e| {
-            NetError::InvalidResponse(format!("failed to read status line: {}", e))
-        })?;
+        buf_reader
+            .read_line(&mut status_line)
+            .map_err(|e| NetError::InvalidResponse(format!("failed to read status line: {}", e)))?;
 
         let (status, reason) = Self::parse_status_line(&status_line)?;
 
@@ -74,9 +74,9 @@ impl Response {
         let mut headers = Headers::new();
         loop {
             let mut line = String::new();
-            buf_reader.read_line(&mut line).map_err(|e| {
-                NetError::InvalidResponse(format!("failed to read header: {}", e))
-            })?;
+            buf_reader
+                .read_line(&mut line)
+                .map_err(|e| NetError::InvalidResponse(format!("failed to read header: {}", e)))?;
 
             let line = line.trim_end_matches(['\r', '\n']);
 
@@ -109,9 +109,9 @@ impl Response {
         // Format: HTTP/1.1 200 OK
         let mut parts = line.splitn(3, ' ');
 
-        let version = parts.next().ok_or_else(|| {
-            NetError::InvalidResponse("empty status line".to_string())
-        })?;
+        let version = parts
+            .next()
+            .ok_or_else(|| NetError::InvalidResponse("empty status line".to_string()))?;
 
         if !version.starts_with("HTTP/") {
             return Err(NetError::InvalidResponse(format!(
@@ -120,9 +120,9 @@ impl Response {
             )));
         }
 
-        let status_str = parts.next().ok_or_else(|| {
-            NetError::InvalidResponse("missing status code".to_string())
-        })?;
+        let status_str = parts
+            .next()
+            .ok_or_else(|| NetError::InvalidResponse("missing status code".to_string()))?;
 
         let status = status_str.parse::<u16>().map_err(|_| {
             NetError::InvalidResponse(format!("invalid status code: {}", status_str))
@@ -142,9 +142,9 @@ impl Response {
             })?;
 
             let mut body = vec![0u8; length];
-            reader.read_exact(&mut body).map_err(|e| {
-                NetError::InvalidResponse(format!("failed to read body: {}", e))
-            })?;
+            reader
+                .read_exact(&mut body)
+                .map_err(|e| NetError::InvalidResponse(format!("failed to read body: {}", e)))?;
 
             return Ok(body);
         }

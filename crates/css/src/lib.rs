@@ -66,21 +66,21 @@ pub mod selector;
 pub mod specificity;
 
 // CSS parsing modules (from PR #34)
+mod parser;
+mod selectors;
 mod tokenizer;
 mod values;
-mod selectors;
-mod parser;
 
 // Re-export selector matching items
 pub use matching::{matches, matches_with_context, PseudoClassContext};
-pub use selector::{Selector, CompoundSelector, Combinator, TypeSelector};
+pub use selector::{Combinator, CompoundSelector, Selector, TypeSelector};
 pub use specificity::Specificity;
 
 // Re-export CSS parsing items
+pub use parser::{parse, Declaration, Rule, Stylesheet};
+pub use selectors::{AttributeOp, AttributeSelector, SimpleSelector};
 pub use tokenizer::{Token, TokenKind, Tokenizer};
-pub use values::{CssValue, Length, LengthUnit, Color};
-pub use selectors::{SimpleSelector, AttributeSelector, AttributeOp};
-pub use parser::{Stylesheet, Rule, Declaration, parse};
+pub use values::{Color, CssValue, Length, LengthUnit};
 
 #[cfg(test)]
 mod tests {
@@ -132,7 +132,10 @@ mod tests {
         let sel = &stylesheet.rules[0].selectors[0];
         assert_eq!(sel.simple_selectors.len(), 2);
         assert_eq!(sel.combinators.len(), 1);
-        assert!(matches!(sel.combinators[0], selectors::Combinator::Descendant));
+        assert!(matches!(
+            sel.combinators[0],
+            selectors::Combinator::Descendant
+        ));
     }
 
     #[test]
@@ -178,9 +181,21 @@ mod tests {
         let stylesheet = parse(css);
         let decls = &stylesheet.rules[0].declarations;
 
-        assert!(matches!(&decls[0].value, CssValue::Length(Length { value: 100.0, unit: LengthUnit::Px })));
+        assert!(matches!(
+            &decls[0].value,
+            CssValue::Length(Length {
+                value: 100.0,
+                unit: LengthUnit::Px
+            })
+        ));
         assert!(matches!(&decls[1].value, CssValue::Percentage(50.0)));
-        assert!(matches!(&decls[2].value, CssValue::Length(Length { value: 2.0, unit: LengthUnit::Em })));
+        assert!(matches!(
+            &decls[2].value,
+            CssValue::Length(Length {
+                value: 2.0,
+                unit: LengthUnit::Em
+            })
+        ));
     }
 
     #[test]
@@ -259,6 +274,9 @@ mod tests {
         let css = "a:hover { color: blue; }";
         let stylesheet = parse(css);
         let sel = &stylesheet.rules[0].selectors[0];
-        assert_eq!(sel.simple_selectors[0].pseudo_classes, vec!["hover".to_string()]);
+        assert_eq!(
+            sel.simple_selectors[0].pseudo_classes,
+            vec!["hover".to_string()]
+        );
     }
 }

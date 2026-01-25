@@ -16,8 +16,8 @@ use vw_dom::{Document, NodeId};
 
 /// Set of void elements that don't have closing tags.
 const VOID_ELEMENTS: &[&str] = &[
-    "area", "base", "br", "col", "embed", "hr", "img", "input",
-    "link", "meta", "param", "source", "track", "wbr",
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
+    "track", "wbr",
 ];
 
 // Note: FORMATTING_ELEMENTS would be used for adoption agency algorithm
@@ -69,7 +69,11 @@ impl TreeBuilder {
     pub fn process(&mut self, token: Token) {
         match token {
             Token::Doctype { name } => self.process_doctype(name),
-            Token::StartTag { name, attributes, self_closing } => {
+            Token::StartTag {
+                name,
+                attributes,
+                self_closing,
+            } => {
                 self.process_start_tag(&name, attributes, self_closing);
             }
             Token::EndTag { name } => self.process_end_tag(&name),
@@ -85,7 +89,10 @@ impl TreeBuilder {
 
     /// Returns the current insertion point (last open element or document root).
     fn current_node(&self) -> NodeId {
-        self.open_elements.last().copied().unwrap_or(self.document.root())
+        self.open_elements
+            .last()
+            .copied()
+            .unwrap_or(self.document.root())
     }
 
     // Note: is_in_scope would be used for more sophisticated tree construction
@@ -134,11 +141,18 @@ impl TreeBuilder {
     }
 
     /// Processes a start tag.
-    fn process_start_tag(&mut self, name: &str, attributes: Vec<(String, String)>, self_closing: bool) {
+    fn process_start_tag(
+        &mut self,
+        name: &str,
+        attributes: Vec<(String, String)>,
+        self_closing: bool,
+    ) {
         match name {
             "html" => {
                 if !self.seen_html {
-                    let html = self.document.create_element_with_attributes("html", attributes);
+                    let html = self
+                        .document
+                        .create_element_with_attributes("html", attributes);
                     self.document.append_child(self.document.root(), html);
                     self.open_elements.push(html);
                     self.seen_html = true;
@@ -148,7 +162,9 @@ impl TreeBuilder {
                 self.ensure_html();
                 if !self.seen_head {
                     let html = self.open_elements.first().copied().unwrap();
-                    let head = self.document.create_element_with_attributes("head", attributes);
+                    let head = self
+                        .document
+                        .create_element_with_attributes("head", attributes);
                     self.document.append_child(html, head);
                     self.open_elements.push(head);
                     self.head_element = Some(head);
@@ -160,14 +176,20 @@ impl TreeBuilder {
                 // Pop head from open elements if it's there
                 if let Some(&last) = self.open_elements.last() {
                     if let Some(node) = self.document.get(last) {
-                        if node.as_element().map(|e| e.tag_name == "head").unwrap_or(false) {
+                        if node
+                            .as_element()
+                            .map(|e| e.tag_name == "head")
+                            .unwrap_or(false)
+                        {
                             self.open_elements.pop();
                         }
                     }
                 }
                 if !self.seen_body {
                     let html = self.open_elements.first().copied().unwrap();
-                    let body = self.document.create_element_with_attributes("body", attributes);
+                    let body = self
+                        .document
+                        .create_element_with_attributes("body", attributes);
                     self.document.append_child(html, body);
                     self.open_elements.push(body);
                     self.body_element = Some(body);
@@ -178,7 +200,9 @@ impl TreeBuilder {
             "title" | "base" | "link" | "meta" | "style" | "script" if !self.seen_body => {
                 self.ensure_head();
                 let parent = self.head_element.unwrap_or(self.current_node());
-                let elem = self.document.create_element_with_attributes(name, attributes);
+                let elem = self
+                    .document
+                    .create_element_with_attributes(name, attributes);
                 self.document.append_child(parent, elem);
                 if !self_closing && !is_void_element(name) {
                     self.open_elements.push(elem);
@@ -187,13 +211,17 @@ impl TreeBuilder {
             // Void elements
             _ if is_void_element(name) || self_closing => {
                 self.ensure_body();
-                let elem = self.document.create_element_with_attributes(name, attributes);
+                let elem = self
+                    .document
+                    .create_element_with_attributes(name, attributes);
                 self.document.append_child(self.current_node(), elem);
             }
             // Regular elements
             _ => {
                 self.ensure_body();
-                let elem = self.document.create_element_with_attributes(name, attributes);
+                let elem = self
+                    .document
+                    .create_element_with_attributes(name, attributes);
                 self.document.append_child(self.current_node(), elem);
                 self.open_elements.push(elem);
             }
@@ -335,7 +363,10 @@ mod tests {
 
         // Should have html, body, p
         let html = doc.document_element().unwrap();
-        assert_eq!(doc.get(html).unwrap().as_element().unwrap().tag_name, "html");
+        assert_eq!(
+            doc.get(html).unwrap().as_element().unwrap().tag_name,
+            "html"
+        );
 
         let body = doc.get_element_by_tag_name("body").unwrap();
         assert!(doc.get(body).is_some());
@@ -350,7 +381,10 @@ mod tests {
 
         // Should have implied html and body
         let html = doc.document_element().unwrap();
-        assert_eq!(doc.get(html).unwrap().as_element().unwrap().tag_name, "html");
+        assert_eq!(
+            doc.get(html).unwrap().as_element().unwrap().tag_name,
+            "html"
+        );
 
         let body = doc.get_element_by_tag_name("body").unwrap();
         assert!(doc.get(body).is_some());

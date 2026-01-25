@@ -36,10 +36,13 @@ fn test_build_simple_document() {
 fn test_element_with_attributes() {
     let mut doc = Document::new();
 
-    let div = doc.create_element_with_attributes("div", vec![
-        ("class".to_string(), "container".to_string()),
-        ("id".to_string(), "main".to_string()),
-    ]);
+    let div = doc.create_element_with_attributes(
+        "div",
+        vec![
+            ("class".to_string(), "container".to_string()),
+            ("id".to_string(), "main".to_string()),
+        ],
+    );
     doc.append_child(doc.root(), div);
 
     let elem = doc.get(div).unwrap().as_element().unwrap();

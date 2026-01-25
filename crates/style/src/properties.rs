@@ -266,7 +266,10 @@ impl WhiteSpace {
 
     /// Check if line breaks should be preserved.
     pub fn preserves_newlines(&self) -> bool {
-        matches!(self, WhiteSpace::Pre | WhiteSpace::PreWrap | WhiteSpace::PreLine)
+        matches!(
+            self,
+            WhiteSpace::Pre | WhiteSpace::PreWrap | WhiteSpace::PreLine
+        )
     }
 
     /// Check if text should wrap.

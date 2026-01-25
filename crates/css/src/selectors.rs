@@ -153,8 +153,8 @@ impl SimpleSelector {
             + self.attributes.len() as u32
             + self.pseudo_classes.len() as u32;
 
-        let elements = if self.tag_name.is_some() { 1 } else { 0 }
-            + self.pseudo_elements.len() as u32;
+        let elements =
+            if self.tag_name.is_some() { 1 } else { 0 } + self.pseudo_elements.len() as u32;
 
         (ids, classes, elements)
     }
@@ -356,11 +356,14 @@ mod tests {
         // div > p.highlight = (0, 1, 2)
         let mut selector = Selector::new();
         selector.add(None, SimpleSelector::tag("div"));
-        selector.add(Some(Combinator::Child), SimpleSelector {
-            tag_name: Some("p".to_string()),
-            classes: vec!["highlight".to_string()],
-            ..Default::default()
-        });
+        selector.add(
+            Some(Combinator::Child),
+            SimpleSelector {
+                tag_name: Some("p".to_string()),
+                classes: vec!["highlight".to_string()],
+                ..Default::default()
+            },
+        );
         assert_eq!(selector.specificity(), (0, 1, 2));
     }
 

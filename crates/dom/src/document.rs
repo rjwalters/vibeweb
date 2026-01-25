@@ -1,6 +1,6 @@
 //! Document type and tree manipulation APIs
 
-use crate::node::{Node, NodeData, NodeId, ElementData};
+use crate::node::{ElementData, Node, NodeData, NodeId};
 
 /// A DOM document containing an arena of nodes.
 ///
@@ -219,11 +219,7 @@ impl Document {
     /// Returns the document element (usually <html>), if present.
     pub fn document_element(&self) -> Option<NodeId> {
         self.children(self.root)
-            .find(|&id| {
-                self.get(id)
-                    .and_then(|n| n.as_element())
-                    .is_some()
-            })
+            .find(|&id| self.get(id).and_then(|n| n.as_element()).is_some())
     }
 
     /// Finds the first element with the given tag name (case-insensitive).

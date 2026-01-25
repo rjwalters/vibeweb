@@ -45,18 +45,30 @@ pub struct Specificity {
 impl Specificity {
     /// Create a new specificity value.
     pub fn new(ids: u16, classes: u16, elements: u16) -> Self {
-        Specificity { ids, classes, elements }
+        Specificity {
+            ids,
+            classes,
+            elements,
+        }
     }
 
     /// Specificity for inline styles (highest priority).
     pub fn inline() -> Self {
         // Inline styles win over all selectors
-        Specificity { ids: u16::MAX, classes: 0, elements: 0 }
+        Specificity {
+            ids: u16::MAX,
+            classes: 0,
+            elements: 0,
+        }
     }
 
     /// Zero specificity (lowest priority).
     pub fn zero() -> Self {
-        Specificity { ids: 0, classes: 0, elements: 0 }
+        Specificity {
+            ids: 0,
+            classes: 0,
+            elements: 0,
+        }
     }
 
     /// Convert to a single numeric value for comparison.
@@ -141,7 +153,14 @@ impl PropertyId {
         use PropertyId::*;
         matches!(
             self,
-            Color | FontSize | FontFamily | FontWeight | LineHeight | TextAlign | WhiteSpace | Visibility
+            Color
+                | FontSize
+                | FontFamily
+                | FontWeight
+                | LineHeight
+                | TextAlign
+                | WhiteSpace
+                | Visibility
         )
     }
 }
@@ -305,7 +324,8 @@ fn compare_cascade_priority(
 /// The cascade: determine winning declarations for each property.
 pub struct Cascade {
     /// Accumulated declarations for each property, sorted by priority.
-    property_values: std::collections::HashMap<PropertyId, (CssValue, bool, Origin, Specificity, usize)>,
+    property_values:
+        std::collections::HashMap<PropertyId, (CssValue, bool, Origin, Specificity, usize)>,
 }
 
 impl Cascade {
@@ -320,7 +340,13 @@ impl Cascade {
     pub fn add_rule(&mut self, rule: &MatchedRule) {
         for decl in &rule.declarations {
             let dominated = match self.property_values.get(&decl.property) {
-                Some((_, existing_important, existing_origin, existing_specificity, existing_order)) => {
+                Some((
+                    _,
+                    existing_important,
+                    existing_origin,
+                    existing_specificity,
+                    existing_order,
+                )) => {
                     compare_cascade_priority(
                         decl.important,
                         rule.origin,
@@ -338,7 +364,13 @@ impl Cascade {
             if !dominated {
                 self.property_values.insert(
                     decl.property,
-                    (decl.value.clone(), decl.important, rule.origin, rule.specificity, rule.source_order),
+                    (
+                        decl.value.clone(),
+                        decl.important,
+                        rule.origin,
+                        rule.specificity,
+                        rule.source_order,
+                    ),
                 );
             }
         }
@@ -486,11 +518,23 @@ impl Cascade {
                     "bold" => FontWeight::BOLD,
                     "lighter" => {
                         let parent_weight = parent.map(|p| p.font_weight.value()).unwrap_or(400);
-                        FontWeight::new(if parent_weight <= 500 { 100 } else if parent_weight <= 700 { 400 } else { 700 })
+                        FontWeight::new(if parent_weight <= 500 {
+                            100
+                        } else if parent_weight <= 700 {
+                            400
+                        } else {
+                            700
+                        })
                     }
                     "bolder" => {
                         let parent_weight = parent.map(|p| p.font_weight.value()).unwrap_or(400);
-                        FontWeight::new(if parent_weight < 400 { 400 } else if parent_weight < 600 { 700 } else { 900 })
+                        FontWeight::new(if parent_weight < 400 {
+                            400
+                        } else if parent_weight < 600 {
+                            700
+                        } else {
+                            900
+                        })
                     }
                     _ => FontWeight::NORMAL,
                 };
@@ -508,7 +552,8 @@ impl Cascade {
             }
             (PropertyId::LineHeight, CssValue::Length(l)) => {
                 let parent_font_size = parent.map(|p| p.font_size).unwrap_or(16.0);
-                style.line_height = LineHeight::Length(l.to_px(parent_font_size, root_font_size, None));
+                style.line_height =
+                    LineHeight::Length(l.to_px(parent_font_size, root_font_size, None));
             }
 
             // Text align
@@ -622,7 +667,8 @@ impl Cascade {
             }
             (PropertyId::VerticalAlign, CssValue::Length(l)) => {
                 let parent_font_size = parent.map(|p| p.font_size).unwrap_or(16.0);
-                style.vertical_align = VerticalAlign::Length(l.to_px(parent_font_size, root_font_size, None));
+                style.vertical_align =
+                    VerticalAlign::Length(l.to_px(parent_font_size, root_font_size, None));
             }
 
             // Ignore unhandled combinations
@@ -631,7 +677,12 @@ impl Cascade {
     }
 
     /// Inherit a property value from parent.
-    fn inherit_property(&self, style: &mut ComputedStyle, property: PropertyId, parent: &ComputedStyle) {
+    fn inherit_property(
+        &self,
+        style: &mut ComputedStyle,
+        property: PropertyId,
+        parent: &ComputedStyle,
+    ) {
         match property {
             PropertyId::Color => style.color = parent.color,
             PropertyId::FontSize => style.font_size = parent.font_size,
@@ -667,7 +718,9 @@ impl Cascade {
             PropertyId::PaddingLeft => style.padding.left = default.padding.left,
             PropertyId::BorderTopWidth => style.border_width.top = default.border_width.top,
             PropertyId::BorderRightWidth => style.border_width.right = default.border_width.right,
-            PropertyId::BorderBottomWidth => style.border_width.bottom = default.border_width.bottom,
+            PropertyId::BorderBottomWidth => {
+                style.border_width.bottom = default.border_width.bottom
+            }
             PropertyId::BorderLeftWidth => style.border_width.left = default.border_width.left,
             PropertyId::BoxSizing => style.box_sizing = default.box_sizing,
             PropertyId::Color => style.color = default.color,
@@ -829,7 +882,10 @@ mod tests {
 
         // Explicitly inherit background-color (normally non-inherited)
         cascade.add_rule(&MatchedRule::new(
-            vec![Declaration::new(PropertyId::BackgroundColor, CssValue::Inherit)],
+            vec![Declaration::new(
+                PropertyId::BackgroundColor,
+                CssValue::Inherit,
+            )],
             Specificity::new(0, 0, 1),
             Origin::Author,
             0,
