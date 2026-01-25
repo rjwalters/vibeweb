@@ -132,8 +132,8 @@ mod tests {
 
     #[test]
     fn test_parse_lines() {
-        let lines = vec!["Content-Type: text/html", "Content-Length: 42", ""];
-        let headers = Headers::parse_lines(lines.iter().map(|s| *s)).unwrap();
+        let lines = ["Content-Type: text/html", "Content-Length: 42", ""];
+        let headers = Headers::parse_lines(lines.iter().copied()).unwrap();
         assert_eq!(headers.get("content-type"), Some("text/html"));
         assert_eq!(headers.get("content-length"), Some("42"));
     }

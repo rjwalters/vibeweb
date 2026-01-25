@@ -149,6 +149,7 @@ pub fn layout_with_fonts<F: FontMetrics>(
 }
 
 /// Recursively lay out a box and its children.
+#[allow(clippy::only_used_in_recursion)]
 fn layout_box_recursive<F: FontMetrics>(
     layout_box: &mut LayoutBox,
     containing_block: &Dimensions,
