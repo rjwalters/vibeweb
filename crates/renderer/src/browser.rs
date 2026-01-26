@@ -222,17 +222,16 @@ impl Browser {
     pub fn navigate(&mut self, html: &str, css: &str) -> Result<()> {
         // Load the new document
         self.document = Document::load(html, css)?;
-        
+
         // Invalidate render tree since we have a new document
         self.invalidate();
-        
+
         // Reset scroll position on navigation
         self.scroll_x = 0.0;
         self.scroll_y = 0.0;
-        
+
         Ok(())
     }
-
 
     /// Get a reference to the underlying document.
     pub fn document(&self) -> &Document {
@@ -414,30 +413,35 @@ mod tests {
     }
 }
 
-    #[test]
-    fn test_navigate() {
-        let mut browser = Browser::new("<html><body>Page 1</body></html>", "", 800, 600).unwrap();
-        let mut fb = Framebuffer::new(800, 600);
+#[test]
+fn test_navigate() {
+    let mut browser = Browser::new("<html><body>Page 1</body></html>", "", 800, 600).unwrap();
+    let mut fb = Framebuffer::new(800, 600);
 
-        // Paint initial page
-        browser.paint(&mut fb);
-        assert!(browser.render_tree().is_some());
+    // Paint initial page
+    browser.paint(&mut fb);
+    assert!(browser.render_tree().is_some());
 
-        // Scroll down a bit
-        browser.set_scroll_position(0.0, 50.0);
-        let (_x, y) = browser.scroll_position();
-        assert_eq!(y, 0.0); // Clamped since content is small
+    // Scroll down a bit
+    browser.set_scroll_position(0.0, 50.0);
+    let (_x, y) = browser.scroll_position();
+    assert_eq!(y, 0.0); // Clamped since content is small
 
-        // Navigate to new page
-        browser.navigate("<html><body><h1>Page 2</h1><p>New content</p></body></html>", "").unwrap();
+    // Navigate to new page
+    browser
+        .navigate(
+            "<html><body><h1>Page 2</h1><p>New content</p></body></html>",
+            "",
+        )
+        .unwrap();
 
-        // Render tree should be invalidated
-        assert!(browser.render_tree().is_none());
+    // Render tree should be invalidated
+    assert!(browser.render_tree().is_none());
 
-        // Scroll should be reset to (0, 0)
-        assert_eq!(browser.scroll_position(), (0.0, 0.0));
+    // Scroll should be reset to (0, 0)
+    assert_eq!(browser.scroll_position(), (0.0, 0.0));
 
-        // Should be able to paint new page
-        browser.paint(&mut fb);
-        assert!(browser.render_tree().is_some());
-    }
+    // Should be able to paint new page
+    browser.paint(&mut fb);
+    assert!(browser.render_tree().is_some());
+}

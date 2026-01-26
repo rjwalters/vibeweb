@@ -4,11 +4,11 @@
 //! trait from vw-style. It uses the vw-css selector matching engine to match
 //! author stylesheet rules against DOM elements.
 
-use vw_css::{Stylesheet, matching::matches, specificity};
+use vw_css::{matching::matches, specificity, Stylesheet};
 use vw_dom::{Document as DomDocument, NodeId as DomNodeId};
-use vw_style::tree::{RuleMatcher, NodeInfo};
-use vw_style::cascade::{MatchedRule, Declaration, Origin, PropertyId, CssValue};
 use vw_gfx::color::Color;
+use vw_style::cascade::{CssValue, Declaration, MatchedRule, Origin, PropertyId};
+use vw_style::tree::{NodeInfo, RuleMatcher};
 
 /// A rule matcher that applies author stylesheets using CSS selector matching.
 ///
@@ -192,7 +192,7 @@ fn convert_css_value(css_value: &vw_css::CssValue) -> Option<CssValue> {
                 vw_css::LengthUnit::Pt => vw_style::Length::Px((len.value * 1.333) as f32), // 1pt = 1.333px
                 vw_css::LengthUnit::Cm => vw_style::Length::Px((len.value * 37.795) as f32), // 1cm = 37.795px
                 vw_css::LengthUnit::Mm => vw_style::Length::Px((len.value * 3.7795) as f32), // 1mm = 3.7795px
-                vw_css::LengthUnit::In => vw_style::Length::Px((len.value * 96.0) as f32),   // 1in = 96px
+                vw_css::LengthUnit::In => vw_style::Length::Px((len.value * 96.0) as f32), // 1in = 96px
             };
             Some(CssValue::Length(style_length))
         }

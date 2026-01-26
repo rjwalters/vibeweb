@@ -36,9 +36,9 @@
 //! render_tree.paint(&mut fb);
 //! ```
 
+mod author_matcher;
 mod browser;
 mod document;
-mod author_matcher;
 mod error;
 mod paint;
 mod render_tree;

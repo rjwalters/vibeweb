@@ -200,7 +200,8 @@ impl Document {
             .collect();
 
         // Build the author style matcher and compute styles
-        let author_matcher = AuthorStyleMatcher::new(&self.stylesheet, &self.dom, &author_node_mapping);
+        let author_matcher =
+            AuthorStyleMatcher::new(&self.stylesheet, &self.dom, &author_node_mapping);
         let builder = StyleTreeBuilder::new(&author_matcher);
         let vw_style_tree = builder.build(&nodes);
 
@@ -244,7 +245,7 @@ fn extract_embedded_styles(dom: &DomDocument) -> String {
         if let Some(node) = dom.get(node_id) {
             // Check if this is a <style> element
             if let Some(elem) = node.as_element() {
-                if elem.tag_name.to_ascii_lowercase() == "style" {
+                if elem.tag_name.eq_ignore_ascii_case("style") {
                     // Extract text content from this style element
                     let style_content = dom.text_content(node_id);
                     if !style_content.trim().is_empty() {
@@ -391,16 +392,30 @@ mod tests {
         let doc = Document::load(html, css).unwrap();
 
         // Verify the stylesheet was parsed
-        assert!(!doc.stylesheet().rules.is_empty(), "Stylesheet should have rules");
-        assert_eq!(doc.stylesheet().rules.len(), 1, "Should have exactly one rule");
+        assert!(
+            !doc.stylesheet().rules.is_empty(),
+            "Stylesheet should have rules"
+        );
+        assert_eq!(
+            doc.stylesheet().rules.len(),
+            1,
+            "Should have exactly one rule"
+        );
 
         // Verify the rule selector
         let rule = &doc.stylesheet().rules[0];
         assert_eq!(rule.selectors.len(), 1, "Rule should have one selector");
 
         // Verify the declaration
-        assert_eq!(rule.declarations.len(), 1, "Rule should have one declaration");
-        assert_eq!(rule.declarations[0].property, "color", "Declaration should be for color property");
+        assert_eq!(
+            rule.declarations.len(),
+            1,
+            "Rule should have one declaration"
+        );
+        assert_eq!(
+            rule.declarations[0].property, "color",
+            "Declaration should be for color property"
+        );
     }
 
     #[test]
@@ -417,7 +432,10 @@ mod tests {
         let doc = Document::load(html, "").unwrap();
 
         // The embedded style should be extracted and parsed
-        assert!(!doc.stylesheet().rules.is_empty(), "Should have extracted CSS from style tag");
+        assert!(
+            !doc.stylesheet().rules.is_empty(),
+            "Should have extracted CSS from style tag"
+        );
     }
 
     #[test]
@@ -435,7 +453,10 @@ mod tests {
         let doc = Document::load(html, "").unwrap();
 
         // Both style blocks should be concatenated and parsed
-        assert!(doc.stylesheet().rules.len() >= 2, "Should have rules from both style tags");
+        assert!(
+            doc.stylesheet().rules.len() >= 2,
+            "Should have rules from both style tags"
+        );
     }
 
     #[test]
@@ -453,7 +474,10 @@ mod tests {
         let doc = Document::load(html, css).unwrap();
 
         // Should have rules from both embedded and external CSS
-        assert!(doc.stylesheet().rules.len() >= 2, "Should combine embedded and external CSS");
+        assert!(
+            doc.stylesheet().rules.len() >= 2,
+            "Should combine embedded and external CSS"
+        );
     }
 
     #[test]
@@ -470,7 +494,10 @@ mod tests {
         let doc = Document::load(html, "").unwrap();
 
         // Style tags anywhere in the document should be extracted
-        assert!(!doc.stylesheet().rules.is_empty(), "Should extract style tag from body");
+        assert!(
+            !doc.stylesheet().rules.is_empty(),
+            "Should extract style tag from body"
+        );
     }
 
     #[test]
@@ -487,6 +514,9 @@ mod tests {
         let doc = Document::load(html, "").unwrap();
 
         // Empty style tag should not cause issues
-        assert!(doc.stylesheet().rules.is_empty(), "Empty style tag should result in no rules");
+        assert!(
+            doc.stylesheet().rules.is_empty(),
+            "Empty style tag should result in no rules"
+        );
     }
 }
