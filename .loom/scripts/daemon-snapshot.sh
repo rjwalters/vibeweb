@@ -37,6 +37,12 @@ MAX_PROPOSALS="${LOOM_MAX_PROPOSALS:-5}"
 ARCHITECT_COOLDOWN="${LOOM_ARCHITECT_COOLDOWN:-1800}"
 HERMIT_COOLDOWN="${LOOM_HERMIT_COOLDOWN:-1800}"
 
+# Support role re-trigger intervals (in seconds)
+GUIDE_INTERVAL="${LOOM_GUIDE_INTERVAL:-900}"        # 15 minutes default
+CHAMPION_INTERVAL="${LOOM_CHAMPION_INTERVAL:-600}"  # 10 minutes default
+DOCTOR_INTERVAL="${LOOM_DOCTOR_INTERVAL:-300}"      # 5 minutes default
+AUDITOR_INTERVAL="${LOOM_AUDITOR_INTERVAL:-600}"    # 10 minutes default
+
 # Issue selection strategy: fifo (default), lifo, priority
 # - fifo: Oldest issues first (FIFO - prevents starvation)
 # - lifo: Newest issues first (LIFO - current GitHub API default)
@@ -95,6 +101,10 @@ ENVIRONMENT VARIABLES:
     LOOM_MAX_PROPOSALS       Maximum pending proposals (default: 5)
     LOOM_ARCHITECT_COOLDOWN  Architect trigger cooldown in seconds (default: 1800)
     LOOM_HERMIT_COOLDOWN     Hermit trigger cooldown in seconds (default: 1800)
+    LOOM_GUIDE_INTERVAL      Guide re-trigger interval in seconds (default: 900)
+    LOOM_CHAMPION_INTERVAL   Champion re-trigger interval in seconds (default: 600)
+    LOOM_DOCTOR_INTERVAL     Doctor re-trigger interval in seconds (default: 300)
+    LOOM_AUDITOR_INTERVAL    Auditor re-trigger interval in seconds (default: 600)
     LOOM_ISSUE_STRATEGY      Issue selection strategy (default: fifo)
                              - fifo: Oldest issues first (prevents starvation)
                              - lifo: Newest issues first
@@ -295,11 +305,31 @@ ACTIVE_SHEPHERDS=0
 LAST_ARCHITECT_TRIGGER=""
 LAST_HERMIT_TRIGGER=""
 
+# Support role state defaults
+GUIDE_LAST_COMPLETED=""
+GUIDE_STATUS="idle"
+CHAMPION_LAST_COMPLETED=""
+CHAMPION_STATUS="idle"
+DOCTOR_LAST_COMPLETED=""
+DOCTOR_STATUS="idle"
+AUDITOR_LAST_COMPLETED=""
+AUDITOR_STATUS="idle"
+
 if [[ -f "$DAEMON_STATE_FILE" ]]; then
     # Count active shepherds (those with status="working")
     ACTIVE_SHEPHERDS=$(jq -r '[.shepherds // {} | to_entries[] | select(.value.status == "working")] | length' "$DAEMON_STATE_FILE" 2>/dev/null || echo "0")
     LAST_ARCHITECT_TRIGGER=$(jq -r '.last_architect_trigger // ""' "$DAEMON_STATE_FILE" 2>/dev/null || echo "")
     LAST_HERMIT_TRIGGER=$(jq -r '.last_hermit_trigger // ""' "$DAEMON_STATE_FILE" 2>/dev/null || echo "")
+
+    # Read support role last_completed timestamps and statuses
+    GUIDE_LAST_COMPLETED=$(jq -r '.support_roles.guide.last_completed // ""' "$DAEMON_STATE_FILE" 2>/dev/null || echo "")
+    GUIDE_STATUS=$(jq -r '.support_roles.guide.status // "idle"' "$DAEMON_STATE_FILE" 2>/dev/null || echo "idle")
+    CHAMPION_LAST_COMPLETED=$(jq -r '.support_roles.champion.last_completed // ""' "$DAEMON_STATE_FILE" 2>/dev/null || echo "")
+    CHAMPION_STATUS=$(jq -r '.support_roles.champion.status // "idle"' "$DAEMON_STATE_FILE" 2>/dev/null || echo "idle")
+    DOCTOR_LAST_COMPLETED=$(jq -r '.support_roles.doctor.last_completed // ""' "$DAEMON_STATE_FILE" 2>/dev/null || echo "")
+    DOCTOR_STATUS=$(jq -r '.support_roles.doctor.status // "idle"' "$DAEMON_STATE_FILE" 2>/dev/null || echo "idle")
+    AUDITOR_LAST_COMPLETED=$(jq -r '.support_roles.auditor.last_completed // ""' "$DAEMON_STATE_FILE" 2>/dev/null || echo "")
+    AUDITOR_STATUS=$(jq -r '.support_roles.auditor.status // "idle"' "$DAEMON_STATE_FILE" 2>/dev/null || echo "idle")
 fi
 
 # Calculate counts
@@ -357,6 +387,81 @@ else
     HERMIT_COOLDOWN_OK="true"
 fi
 
+# Calculate support role idle times
+GUIDE_IDLE_SECONDS=0
+GUIDE_NEEDS_TRIGGER="false"
+if [[ -n "$GUIDE_LAST_COMPLETED" && "$GUIDE_LAST_COMPLETED" != "null" ]]; then
+    if [[ "$(uname)" == "Darwin" ]]; then
+        GUIDE_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$GUIDE_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    else
+        GUIDE_EPOCH=$(date -d "$GUIDE_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    fi
+    if [[ "$GUIDE_EPOCH" != "0" ]]; then
+        GUIDE_IDLE_SECONDS=$((NOW_EPOCH - GUIDE_EPOCH))
+        # Only trigger if not currently running and idle > interval
+        if [[ "$GUIDE_STATUS" != "running" ]] && [[ $GUIDE_IDLE_SECONDS -gt $GUIDE_INTERVAL ]]; then
+            GUIDE_NEEDS_TRIGGER="true"
+        fi
+    fi
+elif [[ "$GUIDE_STATUS" != "running" ]]; then
+    # No last_completed means never run - needs trigger
+    GUIDE_NEEDS_TRIGGER="true"
+fi
+
+CHAMPION_IDLE_SECONDS=0
+CHAMPION_NEEDS_TRIGGER="false"
+if [[ -n "$CHAMPION_LAST_COMPLETED" && "$CHAMPION_LAST_COMPLETED" != "null" ]]; then
+    if [[ "$(uname)" == "Darwin" ]]; then
+        CHAMPION_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$CHAMPION_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    else
+        CHAMPION_EPOCH=$(date -d "$CHAMPION_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    fi
+    if [[ "$CHAMPION_EPOCH" != "0" ]]; then
+        CHAMPION_IDLE_SECONDS=$((NOW_EPOCH - CHAMPION_EPOCH))
+        if [[ "$CHAMPION_STATUS" != "running" ]] && [[ $CHAMPION_IDLE_SECONDS -gt $CHAMPION_INTERVAL ]]; then
+            CHAMPION_NEEDS_TRIGGER="true"
+        fi
+    fi
+elif [[ "$CHAMPION_STATUS" != "running" ]]; then
+    CHAMPION_NEEDS_TRIGGER="true"
+fi
+
+DOCTOR_IDLE_SECONDS=0
+DOCTOR_NEEDS_TRIGGER="false"
+if [[ -n "$DOCTOR_LAST_COMPLETED" && "$DOCTOR_LAST_COMPLETED" != "null" ]]; then
+    if [[ "$(uname)" == "Darwin" ]]; then
+        DOCTOR_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$DOCTOR_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    else
+        DOCTOR_EPOCH=$(date -d "$DOCTOR_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    fi
+    if [[ "$DOCTOR_EPOCH" != "0" ]]; then
+        DOCTOR_IDLE_SECONDS=$((NOW_EPOCH - DOCTOR_EPOCH))
+        if [[ "$DOCTOR_STATUS" != "running" ]] && [[ $DOCTOR_IDLE_SECONDS -gt $DOCTOR_INTERVAL ]]; then
+            DOCTOR_NEEDS_TRIGGER="true"
+        fi
+    fi
+elif [[ "$DOCTOR_STATUS" != "running" ]]; then
+    DOCTOR_NEEDS_TRIGGER="true"
+fi
+
+AUDITOR_IDLE_SECONDS=0
+AUDITOR_NEEDS_TRIGGER="false"
+if [[ -n "$AUDITOR_LAST_COMPLETED" && "$AUDITOR_LAST_COMPLETED" != "null" ]]; then
+    if [[ "$(uname)" == "Darwin" ]]; then
+        AUDITOR_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$AUDITOR_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    else
+        AUDITOR_EPOCH=$(date -d "$AUDITOR_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    fi
+    if [[ "$AUDITOR_EPOCH" != "0" ]]; then
+        AUDITOR_IDLE_SECONDS=$((NOW_EPOCH - AUDITOR_EPOCH))
+        if [[ "$AUDITOR_STATUS" != "running" ]] && [[ $AUDITOR_IDLE_SECONDS -gt $AUDITOR_INTERVAL ]]; then
+            AUDITOR_NEEDS_TRIGGER="true"
+        fi
+    fi
+elif [[ "$AUDITOR_STATUS" != "running" ]]; then
+    AUDITOR_NEEDS_TRIGGER="true"
+fi
+
 # Build recommended actions array
 ACTIONS="[]"
 
@@ -384,6 +489,20 @@ fi
 # This is a simple heuristic - could be enhanced with timestamp checks
 if [[ $BUILDING_COUNT -gt 0 ]]; then
     ACTIONS=$(echo "$ACTIONS" | jq '. + ["check_stuck"]')
+fi
+
+# Action: trigger support roles when idle > interval
+if [[ "$GUIDE_NEEDS_TRIGGER" == "true" ]]; then
+    ACTIONS=$(echo "$ACTIONS" | jq '. + ["trigger_guide"]')
+fi
+if [[ "$CHAMPION_NEEDS_TRIGGER" == "true" ]]; then
+    ACTIONS=$(echo "$ACTIONS" | jq '. + ["trigger_champion"]')
+fi
+if [[ "$DOCTOR_NEEDS_TRIGGER" == "true" ]]; then
+    ACTIONS=$(echo "$ACTIONS" | jq '. + ["trigger_doctor"]')
+fi
+if [[ "$AUDITOR_NEEDS_TRIGGER" == "true" ]]; then
+    ACTIONS=$(echo "$ACTIONS" | jq '. + ["trigger_auditor"]')
 fi
 
 # Action: wait (if nothing else to do)
@@ -463,6 +582,82 @@ SHEPHERD_PROGRESS=$(read_shepherd_progress)
 # Count stale heartbeats for warnings
 STALE_HEARTBEAT_COUNT=$(echo "$SHEPHERD_PROGRESS" | jq '[.[] | select(.heartbeat_stale == true and .status == "working")] | length')
 
+# Detect orphaned shepherds
+# An orphaned shepherd is:
+# 1. A shepherd in daemon-state with status="working" but the issue has loom:building removed
+# 2. An issue with loom:building that's not tracked in any shepherd's assignment
+# 3. A progress file with stale heartbeat and no corresponding daemon-state entry
+detect_orphaned_shepherds() {
+    local orphaned_json="[]"
+
+    # Get tracked issues from daemon-state
+    local daemon_tracked_issues="[]"
+    local daemon_shepherd_task_ids="[]"
+    if [[ -f "$DAEMON_STATE_FILE" ]]; then
+        daemon_tracked_issues=$(jq '[.shepherds // {} | to_entries[] | select(.value.status == "working") | .value.issue] | map(select(. != null))' "$DAEMON_STATE_FILE" 2>/dev/null || echo "[]")
+        daemon_shepherd_task_ids=$(jq '[.shepherds // {} | to_entries[] | select(.value.status == "working") | .value.task_id] | map(select(. != null))' "$DAEMON_STATE_FILE" 2>/dev/null || echo "[]")
+    fi
+
+    # Check 1: loom:building issues not tracked in daemon-state
+    local building_numbers
+    building_numbers=$(echo "$BUILDING_ISSUES" | jq -r '.[].number')
+    for issue_num in $building_numbers; do
+        [[ -z "$issue_num" ]] && continue
+
+        local is_tracked
+        is_tracked=$(echo "$daemon_tracked_issues" | jq --argjson num "$issue_num" 'any(. == $num)')
+
+        if [[ "$is_tracked" == "false" ]]; then
+            # Check if there's an active progress file for this issue
+            local has_active_progress=false
+            for progress in $(echo "$SHEPHERD_PROGRESS" | jq -c '.[]'); do
+                local p_issue
+                p_issue=$(echo "$progress" | jq -r '.issue')
+                local p_status
+                p_status=$(echo "$progress" | jq -r '.status')
+                local p_stale
+                p_stale=$(echo "$progress" | jq -r '.heartbeat_stale')
+
+                if [[ "$p_issue" == "$issue_num" && "$p_status" == "working" && "$p_stale" == "false" ]]; then
+                    has_active_progress=true
+                    break
+                fi
+            done
+
+            if [[ "$has_active_progress" == "false" ]]; then
+                orphaned_json=$(echo "$orphaned_json" | jq --argjson issue "$issue_num" \
+                    '. + [{type: "untracked_building", issue: $issue, reason: "no_daemon_entry"}]')
+            fi
+        fi
+    done
+
+    # Check 2: Progress files with stale heartbeats
+    for progress in $(echo "$SHEPHERD_PROGRESS" | jq -c '.[] | select(.status == "working" and .heartbeat_stale == true)'); do
+        local task_id
+        task_id=$(echo "$progress" | jq -r '.task_id')
+        local issue
+        issue=$(echo "$progress" | jq -r '.issue')
+        local age
+        age=$(echo "$progress" | jq -r '.heartbeat_age_seconds')
+
+        orphaned_json=$(echo "$orphaned_json" | jq \
+            --arg task_id "$task_id" \
+            --argjson issue "$issue" \
+            --argjson age "$age" \
+            '. + [{type: "stale_heartbeat", task_id: $task_id, issue: $issue, age_seconds: $age, reason: "heartbeat_stale"}]')
+    done
+
+    echo "$orphaned_json"
+}
+
+ORPHANED_SHEPHERDS=$(detect_orphaned_shepherds)
+ORPHANED_COUNT=$(echo "$ORPHANED_SHEPHERDS" | jq 'length')
+
+# Add recover_orphans action if any orphans detected
+if [[ "$ORPHANED_COUNT" -gt 0 ]]; then
+    ACTIONS=$(echo "$ACTIONS" | jq '. + ["recover_orphans"]')
+fi
+
 # Build the final JSON output
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
@@ -497,6 +692,24 @@ OUTPUT=$(jq -n \
     --arg issue_strategy "$ISSUE_STRATEGY" \
     --argjson shepherd_progress "$SHEPHERD_PROGRESS" \
     --argjson stale_heartbeat_count "$STALE_HEARTBEAT_COUNT" \
+    --argjson guide_idle_seconds "$GUIDE_IDLE_SECONDS" \
+    --argjson guide_interval "$GUIDE_INTERVAL" \
+    --argjson guide_needs_trigger "$GUIDE_NEEDS_TRIGGER" \
+    --arg guide_status "$GUIDE_STATUS" \
+    --argjson champion_idle_seconds "$CHAMPION_IDLE_SECONDS" \
+    --argjson champion_interval "$CHAMPION_INTERVAL" \
+    --argjson champion_needs_trigger "$CHAMPION_NEEDS_TRIGGER" \
+    --arg champion_status "$CHAMPION_STATUS" \
+    --argjson doctor_idle_seconds "$DOCTOR_IDLE_SECONDS" \
+    --argjson doctor_interval "$DOCTOR_INTERVAL" \
+    --argjson doctor_needs_trigger "$DOCTOR_NEEDS_TRIGGER" \
+    --arg doctor_status "$DOCTOR_STATUS" \
+    --argjson auditor_idle_seconds "$AUDITOR_IDLE_SECONDS" \
+    --argjson auditor_interval "$AUDITOR_INTERVAL" \
+    --argjson auditor_needs_trigger "$AUDITOR_NEEDS_TRIGGER" \
+    --arg auditor_status "$AUDITOR_STATUS" \
+    --argjson orphaned_shepherds "$ORPHANED_SHEPHERDS" \
+    --argjson orphaned_count "$ORPHANED_COUNT" \
     '{
         timestamp: $timestamp,
         pipeline: {
@@ -516,7 +729,35 @@ OUTPUT=$(jq -n \
         },
         shepherds: {
             progress: $shepherd_progress,
-            stale_heartbeat_count: $stale_heartbeat_count
+            stale_heartbeat_count: $stale_heartbeat_count,
+            orphaned: $orphaned_shepherds,
+            orphaned_count: $orphaned_count
+        },
+        support_roles: {
+            guide: {
+                status: $guide_status,
+                idle_seconds: $guide_idle_seconds,
+                interval: $guide_interval,
+                needs_trigger: $guide_needs_trigger
+            },
+            champion: {
+                status: $champion_status,
+                idle_seconds: $champion_idle_seconds,
+                interval: $champion_interval,
+                needs_trigger: $champion_needs_trigger
+            },
+            doctor: {
+                status: $doctor_status,
+                idle_seconds: $doctor_idle_seconds,
+                interval: $doctor_interval,
+                needs_trigger: $doctor_needs_trigger
+            },
+            auditor: {
+                status: $auditor_status,
+                idle_seconds: $auditor_idle_seconds,
+                interval: $auditor_interval,
+                needs_trigger: $auditor_needs_trigger
+            }
         },
         usage: ($usage + {healthy: $usage_healthy}),
         computed: {
@@ -532,7 +773,8 @@ OUTPUT=$(jq -n \
             hermit_cooldown_ok: $hermit_cooldown_ok,
             promotable_proposals: $promotable_proposals,
             recommended_actions: $recommended_actions,
-            stale_heartbeat_count: $stale_heartbeat_count
+            stale_heartbeat_count: $stale_heartbeat_count,
+            orphaned_count: $orphaned_count
         },
         config: {
             issue_threshold: $issue_threshold,
