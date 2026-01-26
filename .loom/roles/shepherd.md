@@ -23,7 +23,7 @@ This role definition is split across multiple files for maintainability:
 | **shepherd.md** (this file) | Core orchestration role, principles, phase flow, error handling |
 | **shepherd-lifecycle.md** | Detailed workflow steps, MCP terminal management, state tracking |
 
-For detailed step-by-step workflow examples, MCP terminal triggering sequences, and auto-configuration logic, read `defaults/.claude/commands/shepherd-lifecycle.md`.
+For detailed step-by-step workflow examples, MCP terminal triggering sequences, and auto-configuration logic, read `.claude/commands/shepherd-lifecycle.md`.
 
 ## Core Principles
 
@@ -232,6 +232,7 @@ Example for each phase:
 result = Task(
     description=f"Curate issue #{issue_number}",
     prompt=f"/curator {issue_number}",
+    subagent_type="general-purpose",
     model="sonnet",
     run_in_background=False
 )
@@ -240,6 +241,7 @@ result = Task(
 result = Task(
     description=f"Build issue #{issue_number}",
     prompt=f"/builder {issue_number}",
+    subagent_type="general-purpose",
     model="opus",
     run_in_background=False
 )
@@ -248,6 +250,7 @@ result = Task(
 result = Task(
     description=f"Review PR #{pr_number}",
     prompt=f"/judge {pr_number}",
+    subagent_type="general-purpose",
     model="opus",
     run_in_background=False
 )
@@ -256,6 +259,7 @@ result = Task(
 result = Task(
     description=f"Address feedback on PR #{pr_number}",
     prompt=f"/doctor {pr_number}",
+    subagent_type="general-purpose",
     model="sonnet",
     run_in_background=False
 )
