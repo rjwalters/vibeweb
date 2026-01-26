@@ -42,6 +42,7 @@ GUIDE_INTERVAL="${LOOM_GUIDE_INTERVAL:-900}"        # 15 minutes default
 CHAMPION_INTERVAL="${LOOM_CHAMPION_INTERVAL:-600}"  # 10 minutes default
 DOCTOR_INTERVAL="${LOOM_DOCTOR_INTERVAL:-300}"      # 5 minutes default
 AUDITOR_INTERVAL="${LOOM_AUDITOR_INTERVAL:-600}"    # 10 minutes default
+JUDGE_INTERVAL="${LOOM_JUDGE_INTERVAL:-300}"        # 5 minutes default
 
 # Issue selection strategy: fifo (default), lifo, priority
 # - fifo: Oldest issues first (FIFO - prevents starvation)
@@ -70,6 +71,9 @@ PROGRESS_DIR="$REPO_ROOT/.loom/progress"
 
 # Heartbeat staleness threshold in seconds (default: 2 minutes)
 HEARTBEAT_STALE_THRESHOLD="${LOOM_HEARTBEAT_STALE_THRESHOLD:-120}"
+
+# tmux socket name for agent pool
+TMUX_SOCKET="${LOOM_TMUX_SOCKET:-loom}"
 
 show_help() {
     cat <<EOF
@@ -105,6 +109,7 @@ ENVIRONMENT VARIABLES:
     LOOM_CHAMPION_INTERVAL   Champion re-trigger interval in seconds (default: 600)
     LOOM_DOCTOR_INTERVAL     Doctor re-trigger interval in seconds (default: 300)
     LOOM_AUDITOR_INTERVAL    Auditor re-trigger interval in seconds (default: 600)
+    LOOM_JUDGE_INTERVAL      Judge re-trigger interval in seconds (default: 300)
     LOOM_ISSUE_STRATEGY      Issue selection strategy (default: fifo)
                              - fifo: Oldest issues first (prevents starvation)
                              - lifo: Newest issues first
@@ -118,7 +123,8 @@ OUTPUT:
     - proposals: Proposal issue lists
     - prs: PR state lists
     - usage: Session usage from claude-monitor (if available)
-    - computed: Pre-computed decision values
+    - tmux_pool: tmux agent pool status (if available)
+    - computed: Pre-computed decision values (includes execution_mode)
     - config: Current threshold configuration
 
 EXAMPLE OUTPUT:
@@ -133,9 +139,16 @@ EXAMPLE OUTPUT:
         "hermit": [],
         "curated": []
       },
+      "tmux_pool": {
+        "available": true,
+        "sessions": ["loom-shepherd-1", "loom-shepherd-2"],
+        "shepherd_count": 2,
+        "execution_mode": "tmux"
+      },
       "computed": {
         "total_ready": 1,
         "needs_work_generation": false,
+        "execution_mode": "tmux",
         "recommended_actions": ["spawn_shepherds"]
       }
     }
@@ -314,6 +327,8 @@ DOCTOR_LAST_COMPLETED=""
 DOCTOR_STATUS="idle"
 AUDITOR_LAST_COMPLETED=""
 AUDITOR_STATUS="idle"
+JUDGE_LAST_COMPLETED=""
+JUDGE_STATUS="idle"
 
 if [[ -f "$DAEMON_STATE_FILE" ]]; then
     # Count active shepherds (those with status="working")
@@ -330,6 +345,8 @@ if [[ -f "$DAEMON_STATE_FILE" ]]; then
     DOCTOR_STATUS=$(jq -r '.support_roles.doctor.status // "idle"' "$DAEMON_STATE_FILE" 2>/dev/null || echo "idle")
     AUDITOR_LAST_COMPLETED=$(jq -r '.support_roles.auditor.last_completed // ""' "$DAEMON_STATE_FILE" 2>/dev/null || echo "")
     AUDITOR_STATUS=$(jq -r '.support_roles.auditor.status // "idle"' "$DAEMON_STATE_FILE" 2>/dev/null || echo "idle")
+    JUDGE_LAST_COMPLETED=$(jq -r '.support_roles.judge.last_completed // ""' "$DAEMON_STATE_FILE" 2>/dev/null || echo "")
+    JUDGE_STATUS=$(jq -r '.support_roles.judge.status // "idle"' "$DAEMON_STATE_FILE" 2>/dev/null || echo "idle")
 fi
 
 # Calculate counts
@@ -462,6 +479,24 @@ elif [[ "$AUDITOR_STATUS" != "running" ]]; then
     AUDITOR_NEEDS_TRIGGER="true"
 fi
 
+JUDGE_IDLE_SECONDS=0
+JUDGE_NEEDS_TRIGGER="false"
+if [[ -n "$JUDGE_LAST_COMPLETED" && "$JUDGE_LAST_COMPLETED" != "null" ]]; then
+    if [[ "$(uname)" == "Darwin" ]]; then
+        JUDGE_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$JUDGE_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    else
+        JUDGE_EPOCH=$(date -d "$JUDGE_LAST_COMPLETED" "+%s" 2>/dev/null || echo "0")
+    fi
+    if [[ "$JUDGE_EPOCH" != "0" ]]; then
+        JUDGE_IDLE_SECONDS=$((NOW_EPOCH - JUDGE_EPOCH))
+        if [[ "$JUDGE_STATUS" != "running" ]] && [[ $JUDGE_IDLE_SECONDS -gt $JUDGE_INTERVAL ]]; then
+            JUDGE_NEEDS_TRIGGER="true"
+        fi
+    fi
+elif [[ "$JUDGE_STATUS" != "running" ]]; then
+    JUDGE_NEEDS_TRIGGER="true"
+fi
+
 # Build recommended actions array
 ACTIONS="[]"
 
@@ -495,6 +530,7 @@ fi
 # These take priority over interval-based triggers for faster response
 CHAMPION_DEMAND="false"
 DOCTOR_DEMAND="false"
+JUDGE_DEMAND="false"
 
 # Spawn Champion on-demand if PRs are ready to merge and Champion not running
 if [[ "$MERGE_COUNT" -gt 0 ]] && [[ "$CHAMPION_STATUS" != "running" ]]; then
@@ -506,6 +542,12 @@ fi
 if [[ "$CHANGES_COUNT" -gt 0 ]] && [[ "$DOCTOR_STATUS" != "running" ]]; then
     ACTIONS=$(echo "$ACTIONS" | jq '. + ["spawn_doctor_demand"]')
     DOCTOR_DEMAND="true"
+fi
+
+# Spawn Judge on-demand if PRs need review and Judge not running
+if [[ "$REVIEW_COUNT" -gt 0 ]] && [[ "$JUDGE_STATUS" != "running" ]]; then
+    ACTIONS=$(echo "$ACTIONS" | jq '. + ["spawn_judge_demand"]')
+    JUDGE_DEMAND="true"
 fi
 
 # Action: trigger support roles when idle > interval (interval-based fallback)
@@ -521,6 +563,9 @@ if [[ "$DOCTOR_NEEDS_TRIGGER" == "true" ]] && [[ "$DOCTOR_DEMAND" == "false" ]];
 fi
 if [[ "$AUDITOR_NEEDS_TRIGGER" == "true" ]]; then
     ACTIONS=$(echo "$ACTIONS" | jq '. + ["trigger_auditor"]')
+fi
+if [[ "$JUDGE_NEEDS_TRIGGER" == "true" ]] && [[ "$JUDGE_DEMAND" == "false" ]]; then
+    ACTIONS=$(echo "$ACTIONS" | jq '. + ["trigger_judge"]')
 fi
 
 # Action: wait (if nothing else to do)
@@ -596,6 +641,60 @@ read_shepherd_progress() {
 }
 
 SHEPHERD_PROGRESS=$(read_shepherd_progress)
+
+# Detect tmux agent pool status
+detect_tmux_pool() {
+    local pool_json='{"available": false, "sessions": [], "shepherd_count": 0, "total_count": 0, "execution_mode": "direct"}'
+
+    # Check if tmux server is running with loom socket
+    if tmux -L "$TMUX_SOCKET" has-session 2>/dev/null; then
+        local sessions
+        sessions=$(tmux -L "$TMUX_SOCKET" list-sessions -F '#{session_name}' 2>/dev/null || true)
+
+        if [[ -n "$sessions" ]]; then
+            local session_array="[]"
+            local shepherd_count=0
+            local total_count=0
+
+            while IFS= read -r session; do
+                if [[ -n "$session" ]]; then
+                    session_array=$(echo "$session_array" | jq --arg s "$session" '. + [$s]')
+                    ((total_count++))
+                    if [[ "$session" == *"shepherd"* ]]; then
+                        ((shepherd_count++))
+                    fi
+                fi
+            done <<< "$sessions"
+
+            # Determine execution mode
+            local exec_mode="direct"
+            if [[ $shepherd_count -gt 0 ]]; then
+                exec_mode="tmux"
+            fi
+
+            pool_json=$(jq -n \
+                --argjson available "true" \
+                --argjson sessions "$session_array" \
+                --argjson shepherd_count "$shepherd_count" \
+                --argjson total_count "$total_count" \
+                --arg execution_mode "$exec_mode" \
+                '{
+                    available: $available,
+                    sessions: $sessions,
+                    shepherd_count: $shepherd_count,
+                    total_count: $total_count,
+                    execution_mode: $execution_mode
+                }')
+        fi
+    fi
+
+    echo "$pool_json"
+}
+
+TMUX_POOL=$(detect_tmux_pool)
+TMUX_AVAILABLE=$(echo "$TMUX_POOL" | jq -r '.available')
+TMUX_SHEPHERD_COUNT=$(echo "$TMUX_POOL" | jq -r '.shepherd_count')
+TMUX_EXECUTION_MODE=$(echo "$TMUX_POOL" | jq -r '.execution_mode')
 
 # Count stale heartbeats for warnings
 STALE_HEARTBEAT_COUNT=$(echo "$SHEPHERD_PROGRESS" | jq '[.[] | select(.heartbeat_stale == true and .status == "working")] | length')
@@ -730,9 +829,18 @@ OUTPUT=$(jq -n \
     --argjson orphaned_count "$ORPHANED_COUNT" \
     --argjson champion_demand "$CHAMPION_DEMAND" \
     --argjson doctor_demand "$DOCTOR_DEMAND" \
+    --argjson judge_idle_seconds "$JUDGE_IDLE_SECONDS" \
+    --argjson judge_interval "$JUDGE_INTERVAL" \
+    --argjson judge_needs_trigger "$JUDGE_NEEDS_TRIGGER" \
+    --arg judge_status "$JUDGE_STATUS" \
+    --argjson judge_demand "$JUDGE_DEMAND" \
     --argjson review_requested_count "$REVIEW_COUNT" \
     --argjson changes_requested_count "$CHANGES_COUNT" \
     --argjson ready_to_merge_count "$MERGE_COUNT" \
+    --argjson tmux_pool "$TMUX_POOL" \
+    --argjson tmux_available "$TMUX_AVAILABLE" \
+    --argjson tmux_shepherd_count "$TMUX_SHEPHERD_COUNT" \
+    --arg tmux_execution_mode "$TMUX_EXECUTION_MODE" \
     '{
         timestamp: $timestamp,
         pipeline: {
@@ -782,9 +890,17 @@ OUTPUT=$(jq -n \
                 idle_seconds: $auditor_idle_seconds,
                 interval: $auditor_interval,
                 needs_trigger: $auditor_needs_trigger
+            },
+            judge: {
+                status: $judge_status,
+                idle_seconds: $judge_idle_seconds,
+                interval: $judge_interval,
+                needs_trigger: $judge_needs_trigger,
+                demand_trigger: $judge_demand
             }
         },
         usage: ($usage + {healthy: $usage_healthy}),
+        tmux_pool: $tmux_pool,
         computed: {
             total_ready: $total_ready,
             total_building: $total_building,
@@ -804,7 +920,11 @@ OUTPUT=$(jq -n \
             prs_needing_fixes: $changes_requested_count,
             prs_ready_to_merge: $ready_to_merge_count,
             champion_demand: $champion_demand,
-            doctor_demand: $doctor_demand
+            doctor_demand: $doctor_demand,
+            judge_demand: $judge_demand,
+            execution_mode: $tmux_execution_mode,
+            tmux_available: $tmux_available,
+            tmux_shepherd_count: $tmux_shepherd_count
         },
         config: {
             issue_threshold: $issue_threshold,

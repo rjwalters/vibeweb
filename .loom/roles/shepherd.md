@@ -117,7 +117,7 @@ At orchestration start, detect which mode to use:
 
 ```bash
 # Attempt MCP call to detect Loom Tauri app
-if mcp__loom-ui__get_ui_state >/dev/null 2>&1; then
+if mcp__loom__get_ui_state >/dev/null 2>&1; then
   MODE="mcp"
   echo "MCP Mode: Loom app detected, will delegate to role terminals"
 else
@@ -212,6 +212,14 @@ When orchestrating issue #N, follow this progression:
 **Important**: Curation is mandatory. Even if an issue already has `loom:issue` label, the shepherd will run Curator first if `loom:curated` is not present. This ensures all issues receive proper enhancement (acceptance criteria, implementation guidance, test plans) before building begins.
 
 ### Direct Mode Role Execution Pattern
+
+> **IMPORTANT**: In Direct Mode, always use `Task` subagents for phase delegation.
+> Do NOT use the `Skill` tool — it expands the role prompt into your conversation,
+> replacing your orchestration context. Only `Task` preserves your control flow.
+>
+> The `Skill` tool is used by the *daemon* to invoke *shepherds* (so the shepherd
+> gets its full role prompt expanded). Shepherds themselves use plain `Task` subagents
+> with slash-command prompts for phase delegation.
 
 For each phase, the shepherd spawns a Task subagent:
 
@@ -331,7 +339,7 @@ gh issue comment $ISSUE_NUMBER --body "Orchestration paused: Issue is blocked. C
 The shepherd automatically selects the appropriate execution mode:
 
 ```bash
-if mcp__loom-ui__get_ui_state >/dev/null 2>&1; then
+if mcp__loom__get_ui_state >/dev/null 2>&1; then
   MODE="mcp"
 else
   MODE="direct"
