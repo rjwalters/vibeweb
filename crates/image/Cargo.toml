@@ -7,5 +7,7 @@ license.workspace = true
 [dependencies]
 # PNG decoding - well-audited, minimal dependency
 png = "0.17"
+# Error handling
+thiserror.workspace = true
 
 [dev-dependencies]

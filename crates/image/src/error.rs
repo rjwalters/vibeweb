@@ -1,44 +1,22 @@
 //! Image decoding errors
 
-use std::fmt;
 use std::io;
+use thiserror::Error;
 
 /// Errors that can occur during image decoding
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ImageError {
     /// The image format is not supported
+    #[error("unsupported image format")]
     UnsupportedFormat,
 
     /// The image data is invalid or corrupt
+    #[error("invalid image data: {0}")]
     InvalidData(String),
 
     /// An I/O error occurred while reading the image
-    Io(io::Error),
-}
-
-impl fmt::Display for ImageError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ImageError::UnsupportedFormat => write!(f, "unsupported image format"),
-            ImageError::InvalidData(msg) => write!(f, "invalid image data: {}", msg),
-            ImageError::Io(err) => write!(f, "I/O error: {}", err),
-        }
-    }
-}
-
-impl std::error::Error for ImageError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            ImageError::Io(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-impl From<io::Error> for ImageError {
-    fn from(err: io::Error) -> Self {
-        ImageError::Io(err)
-    }
+    #[error("I/O error: {0}")]
+    Io(#[from] io::Error),
 }
 
 impl From<png::DecodingError> for ImageError {
