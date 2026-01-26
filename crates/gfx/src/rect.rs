@@ -24,11 +24,6 @@ impl Rect {
         }
     }
 
-    /// Create a rectangle from position and size
-    pub const fn from_xywh(x: i32, y: i32, width: u32, height: u32) -> Self {
-        Self::new(x, y, width, height)
-    }
-
     /// Check if this rectangle is empty (zero width or height)
     pub const fn is_empty(&self) -> bool {
         self.width == 0 || self.height == 0
