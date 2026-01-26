@@ -53,8 +53,20 @@ impl Document {
         // Parse HTML into DOM
         let dom = vw_html::parse(html);
 
+        // Extract CSS from <style> tags in the DOM
+        let embedded_css = extract_embedded_styles(&dom);
+
+        // Combine embedded CSS with external CSS
+        let combined_css = if embedded_css.is_empty() {
+            css.to_string()
+        } else if css.is_empty() {
+            embedded_css
+        } else {
+            format!("{}\n{}", embedded_css, css)
+        };
+
         // Parse CSS into stylesheet
-        let stylesheet = vw_css::parse(css);
+        let stylesheet = vw_css::parse(&combined_css);
 
         Ok(Document { dom, stylesheet })
     }
@@ -220,6 +232,33 @@ impl Document {
     }
 }
 
+/// Extract CSS from all <style> tags in the document.
+///
+/// This function traverses the DOM, finds all <style> elements,
+/// and concatenates their text content in document order.
+fn extract_embedded_styles(dom: &DomDocument) -> String {
+    let mut css_parts = Vec::new();
+
+    // Traverse all descendants of the document root
+    for node_id in dom.descendants(dom.root()) {
+        if let Some(node) = dom.get(node_id) {
+            // Check if this is a <style> element
+            if let Some(elem) = node.as_element() {
+                if elem.tag_name.to_ascii_lowercase() == "style" {
+                    // Extract text content from this style element
+                    let style_content = dom.text_content(node_id);
+                    if !style_content.trim().is_empty() {
+                        css_parts.push(style_content);
+                    }
+                }
+            }
+        }
+    }
+
+    // Concatenate all style blocks with newlines
+    css_parts.join("\n")
+}
+
 /// Convert a vw-style ComputedStyle to a vw-layout ComputedStyle.
 fn convert_style(vw_style: &VwComputedStyle) -> LayoutComputedStyle {
     use vw_layout::style::LineHeight as LayoutLineHeight;
@@ -342,7 +381,6 @@ mod tests {
         assert_eq!(render_tree.viewport_width(), 800);
         assert_eq!(render_tree.viewport_height(), 600);
     }
-}
 
     #[test]
     fn test_author_stylesheet_applied() {
@@ -364,3 +402,91 @@ mod tests {
         assert_eq!(rule.declarations.len(), 1, "Rule should have one declaration");
         assert_eq!(rule.declarations[0].property, "color", "Declaration should be for color property");
     }
+
+    #[test]
+    fn test_extract_single_style_tag() {
+        let html = r#"
+            <html>
+            <head>
+                <style>body { color: red; }</style>
+            </head>
+            <body></body>
+            </html>
+        "#;
+
+        let doc = Document::load(html, "").unwrap();
+
+        // The embedded style should be extracted and parsed
+        assert!(!doc.stylesheet().rules.is_empty(), "Should have extracted CSS from style tag");
+    }
+
+    #[test]
+    fn test_extract_multiple_style_tags() {
+        let html = r#"
+            <html>
+            <head>
+                <style>body { color: red; }</style>
+                <style>p { margin: 10px; }</style>
+            </head>
+            <body></body>
+            </html>
+        "#;
+
+        let doc = Document::load(html, "").unwrap();
+
+        // Both style blocks should be concatenated and parsed
+        assert!(doc.stylesheet().rules.len() >= 2, "Should have rules from both style tags");
+    }
+
+    #[test]
+    fn test_combine_embedded_and_external_css() {
+        let html = r#"
+            <html>
+            <head>
+                <style>body { color: red; }</style>
+            </head>
+            <body></body>
+            </html>
+        "#;
+        let css = "p { font-size: 14px; }";
+
+        let doc = Document::load(html, css).unwrap();
+
+        // Should have rules from both embedded and external CSS
+        assert!(doc.stylesheet().rules.len() >= 2, "Should combine embedded and external CSS");
+    }
+
+    #[test]
+    fn test_style_tag_in_body() {
+        let html = r#"
+            <html>
+            <body>
+                <style>div { background: blue; }</style>
+                <div>Content</div>
+            </body>
+            </html>
+        "#;
+
+        let doc = Document::load(html, "").unwrap();
+
+        // Style tags anywhere in the document should be extracted
+        assert!(!doc.stylesheet().rules.is_empty(), "Should extract style tag from body");
+    }
+
+    #[test]
+    fn test_empty_style_tag() {
+        let html = r#"
+            <html>
+            <head>
+                <style></style>
+            </head>
+            <body></body>
+            </html>
+        "#;
+
+        let doc = Document::load(html, "").unwrap();
+
+        // Empty style tag should not cause issues
+        assert!(doc.stylesheet().rules.is_empty(), "Empty style tag should result in no rules");
+    }
+}
