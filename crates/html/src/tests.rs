@@ -214,11 +214,10 @@ fn test_comments_preserved() {
 fn test_text_with_special_chars() {
     let doc = parse("<p>Hello &amp; goodbye</p>");
 
-    // Note: We don't decode HTML entities in this simple parser
-    // The text content will contain the literal &amp;
+    // HTML entities should be decoded
     let p = doc.get_element_by_tag_name("p").unwrap();
     let text = doc.text_content(p);
-    assert!(text.contains("&amp;") || text.contains("&"));
+    assert_eq!(text, "Hello & goodbye");
 }
 
 #[test]
@@ -251,4 +250,66 @@ fn test_script_and_style_in_head() {
     // Both should be in head
     assert_eq!(doc.get(style).unwrap().parent, Some(head));
     assert_eq!(doc.get(script).unwrap().parent, Some(head));
+}
+
+// Entity decoding tests
+
+#[test]
+fn test_entity_decoding_basic() {
+    let doc = parse("<p>&amp;</p>");
+    let p = doc.get_element_by_tag_name("p").unwrap();
+    assert_eq!(doc.text_content(p), "&");
+}
+
+#[test]
+fn test_entity_decoding_in_attributes() {
+    let doc = parse(r#"<a href="?a=1&amp;b=2">link</a>"#);
+    let a = doc.get_element_by_tag_name("a").unwrap();
+    let href = &doc
+        .get(a)
+        .unwrap()
+        .as_element()
+        .unwrap()
+        .attributes
+        .iter()
+        .find(|(k, _)| k == "href")
+        .unwrap()
+        .1;
+    assert_eq!(href, "?a=1&b=2");
+}
+
+#[test]
+fn test_entity_decoding_numeric_decimal() {
+    let doc = parse("<p>&#60;script&#62;</p>");
+    let p = doc.get_element_by_tag_name("p").unwrap();
+    assert_eq!(doc.text_content(p), "<script>");
+}
+
+#[test]
+fn test_entity_decoding_numeric_hex() {
+    let doc = parse("<p>&#x3C;script&#x3E;</p>");
+    let p = doc.get_element_by_tag_name("p").unwrap();
+    assert_eq!(doc.text_content(p), "<script>");
+}
+
+#[test]
+fn test_entity_decoding_nbsp() {
+    let doc = parse("<p>&nbsp;</p>");
+    let p = doc.get_element_by_tag_name("p").unwrap();
+    assert_eq!(doc.text_content(p), "\u{00A0}");
+}
+
+#[test]
+fn test_entity_decoding_unknown() {
+    // Unknown entities should be passed through unchanged
+    let doc = parse("<p>&unknown;</p>");
+    let p = doc.get_element_by_tag_name("p").unwrap();
+    assert_eq!(doc.text_content(p), "&unknown;");
+}
+
+#[test]
+fn test_entity_decoding_multiple() {
+    let doc = parse("<p>&lt;div&gt;&amp;&lt;/div&gt;</p>");
+    let p = doc.get_element_by_tag_name("p").unwrap();
+    assert_eq!(doc.text_content(p), "<div>&</div>");
 }

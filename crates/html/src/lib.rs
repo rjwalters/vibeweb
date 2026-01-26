@@ -9,9 +9,11 @@
 //! The implementation focuses on common HTML patterns rather than full
 //! HTML5 spec compliance, following the project's "subset compliance" approach.
 
+mod entity;
 mod tokenizer;
 mod tree_builder;
 
+pub use entity::decode_entities;
 pub use tokenizer::{Token, Tokenizer};
 pub use tree_builder::TreeBuilder;
 
