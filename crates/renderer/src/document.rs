@@ -12,7 +12,7 @@ use vw_dom::NodeId as DomNodeId;
 use vw_layout::dom::{Document as LayoutDocument, NodeData as LayoutNodeData};
 use vw_layout::style::{ComputedStyle as LayoutComputedStyle, Display, Length, StyleTree};
 use vw_layout::NodeId as LayoutNodeId;
-use vw_style::tree::{compute_styles_default, NodeInfo, RuleMatcher, StyleTreeBuilder};
+use vw_style::tree::{compute_styles_default, NodeInfo};
 use vw_style::ComputedStyle as VwComputedStyle;
 use vw_style::Length as VwLength;
 
@@ -179,14 +179,8 @@ impl Document {
             .collect();
 
         // Compute styles using default UA stylesheet + author stylesheet
-        let vw_style_tree = if !self.stylesheet.rules.is_empty() {
-            // Create a matcher that includes author styles
-            let matcher = AuthorStyleMatcher::new(&self.stylesheet, &self.dom);
-            let builder = StyleTreeBuilder::new(&matcher);
-            builder.build(&nodes)
-        } else {
-            compute_styles_default(&nodes)
-        };
+        // TODO: Wire up CSS selector matching to use self.stylesheet
+        let vw_style_tree = compute_styles_default(&nodes);
 
         // Convert vw-style's StyleTree to vw-layout's StyleTree
         let mut layout_style_tree = StyleTree::new();
@@ -300,33 +294,6 @@ fn length_to_px(len: &VwLength, font_size: f32, root_font_size: f32) -> f32 {
     len.to_px(font_size, root_font_size, None)
 }
 
-/// A rule matcher that includes author styles from a parsed stylesheet.
-#[allow(dead_code)]
-struct AuthorStyleMatcher<'a> {
-    stylesheet: &'a Stylesheet,
-    dom: &'a DomDocument,
-}
-
-impl<'a> AuthorStyleMatcher<'a> {
-    fn new(stylesheet: &'a Stylesheet, dom: &'a DomDocument) -> Self {
-        AuthorStyleMatcher { stylesheet, dom }
-    }
-}
-
-impl<'a> RuleMatcher for AuthorStyleMatcher<'a> {
-    fn match_rules(&self, node: &NodeInfo) -> Vec<vw_style::MatchedRule> {
-        // Start with UA defaults
-        let rules = vw_style::defaults::user_agent_rules_for_element(
-            node.tag_name.as_deref().unwrap_or(""),
-        );
-
-        // TODO: Add author style matching when vw-css selector matching is wired up
-        // For now, we only use UA defaults (self.stylesheet and self.dom will be
-        // used when CSS selector matching is implemented)
-
-        rules
-    }
-}
 
 #[cfg(test)]
 mod tests {
