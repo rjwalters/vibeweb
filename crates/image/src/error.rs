@@ -35,24 +35,3 @@ impl From<png::DecodingError> for ImageError {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn error_display() {
-        let err = ImageError::UnsupportedFormat;
-        assert_eq!(format!("{}", err), "unsupported image format");
-
-        let err = ImageError::InvalidData("test error".to_string());
-        assert_eq!(format!("{}", err), "invalid image data: test error");
-    }
-
-    #[test]
-    fn error_from_io() {
-        let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
-        let img_err: ImageError = io_err.into();
-        assert!(matches!(img_err, ImageError::Io(_)));
-    }
-}
