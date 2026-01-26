@@ -5,5 +5,5 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-fontdb = "0.16"      # Font discovery, ~40KB
+fontdb = "0.23"      # Font discovery, ~40KB
 ab_glyph = "0.2"     # Glyph metrics, ~20KB
