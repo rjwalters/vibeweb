@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "dom_compact": "#doc[<!DOCTYPE html>,<!--Purpose: Test nested element structure (3 levels deep)-->,<html>[<head>[,<title>[\"Nested Divs\"],],<body>[,<div id=\"outer\">[,<div id=\"middle\">[,<div id=\"inner\">[\"Deeply nested content\"],],],],],]",
+  "dom_tree": "#document\n  <!DOCTYPE html>\n  <!-- Purpose: Test nested element structure (3 levels deep) -->\n  <html>\n    <head>\n      <title>\n        \"Nested Divs\"\n    <body>\n      <div id=\"outer\">\n        <div id=\"middle\">\n          <div id=\"inner\">\n            \"Deeply nested content\"\n"
+}

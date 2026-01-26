@@ -1,0 +1,22 @@
+/* Purpose: Test CSS styling for colored boxes */
+
+#red {
+    background-color: red;
+    border: 2px solid darkred;
+    width: 100px;
+    height: 50px;
+}
+
+#blue {
+    background-color: blue;
+    border: 2px solid darkblue;
+    width: 150px;
+    height: 75px;
+}
+
+#green {
+    background-color: green;
+    border: 2px solid darkgreen;
+    width: 200px;
+    height: 100px;
+}

@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "dom_compact": "#doc[<!DOCTYPE html>,<!--Purpose: Test multiple paragraphs with line breaks-->,<html>[<head>[,<title>[\"Multiple Paragraphs\"],],<body>[,<p>[\"First paragraph with some text.\"],,<p>[\"Second paragraph with more text.\"],,<p>[\"Third paragraph with even more text.\"],],],]",
+  "dom_tree": "#document\n  <!DOCTYPE html>\n  <!-- Purpose: Test multiple paragraphs with line breaks -->\n  <html>\n    <head>\n      <title>\n        \"Multiple Paragraphs\"\n    <body>\n      <p>\n        \"First paragraph with some text.\"\n      <p>\n        \"Second paragraph with more text.\"\n      <p>\n        \"Third paragraph with even more text.\"\n"
+}

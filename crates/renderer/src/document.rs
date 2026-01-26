@@ -294,7 +294,6 @@ fn length_to_px(len: &VwLength, font_size: f32, root_font_size: f32) -> f32 {
     len.to_px(font_size, root_font_size, None)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

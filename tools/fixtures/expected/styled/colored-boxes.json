@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "dom_compact": "#doc[<!DOCTYPE html>,<!--Purpose: Test styled elements with CSS colors and borders-->,<html>[<head>[,<title>[\"Colored Boxes\"],,<link href=\"boxes.css\" rel=\"stylesheet\">,],<body>[,<div id=\"red\">[\"Red box\"],,<div id=\"blue\">[\"Blue box\"],,<div id=\"green\">[\"Green box\"],],],]",
+  "dom_tree": "#document\n  <!DOCTYPE html>\n  <!-- Purpose: Test styled elements with CSS colors and borders -->\n  <html>\n    <head>\n      <title>\n        \"Colored Boxes\"\n      <link href=\"boxes.css\" rel=\"stylesheet\">\n    <body>\n      <div id=\"red\">\n        \"Red box\"\n      <div id=\"blue\">\n        \"Blue box\"\n      <div id=\"green\">\n        \"Green box\"\n"
+}
