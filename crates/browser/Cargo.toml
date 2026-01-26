@@ -16,4 +16,5 @@ path = "src/main.rs"
 vw-platform.workspace = true
 vw-gfx.workspace = true
 vw-renderer.workspace = true
+vw-net.workspace = true
 softbuffer.workspace = true
