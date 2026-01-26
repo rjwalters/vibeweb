@@ -118,17 +118,16 @@ impl DocumentSource {
 /// Load a document from a URL
 fn load_url(url: &str) -> Result<(String, String), LoadError> {
     println!("Loading URL: {}", url);
-    
+
     let client = Client::new();
     let response = client.fetch(url)?;
-    
+
     // Convert body to UTF-8 string, using lossy conversion for invalid UTF-8
     let html = String::from_utf8_lossy(&response.body).to_string();
-    
-    // TODO: Extract CSS from <link> tags or <style> blocks
-    // For now, return empty CSS
-    let css = String::new();
-    
+
+    // CSS will be extracted from <style> tags by Document::load()
+    let css = String::new(); // External CSS via <link> tags not yet supported
+
     println!("Loaded {} bytes from {}", html.len(), url);
     Ok((html, css))
 }
@@ -136,13 +135,12 @@ fn load_url(url: &str) -> Result<(String, String), LoadError> {
 /// Load a document from a local file
 fn load_file(path: &Path) -> Result<(String, String), LoadError> {
     println!("Loading file: {}", path.display());
-    
+
     let html = fs::read_to_string(path)?;
-    
+
     // TODO: Look for companion .css file or extract inline styles
-    // For now, return empty CSS
-    let css = String::new();
-    
+    // CSS will be extracted from <style> tags by Document::load()
+    let css = String::new(); // Companion .css files not yet supported
     println!("Loaded {} bytes from {}", html.len(), path.display());
     Ok((html, css))
 }
