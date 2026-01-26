@@ -244,11 +244,7 @@ fn cmd_generate(args: &[String]) {
     // Create parent directories
     if let Some(parent) = golden_file.parent() {
         fs::create_dir_all(parent).unwrap_or_else(|e| {
-            eprintln!(
-                "Failed to create directory '{}': {}",
-                parent.display(),
-                e
-            );
+            eprintln!("Failed to create directory '{}': {}", parent.display(), e);
             process::exit(1);
         });
     }
@@ -284,11 +280,11 @@ fn cmd_compare(args: &[String]) {
 
     let golden_file = golden_path(fixture_path);
     if !golden_file.exists() {
+        eprintln!("Error: Golden file not found: {}", golden_file.display());
         eprintln!(
-            "Error: Golden file not found: {}",
-            golden_file.display()
+            "Run 'harness generate {}' to create it",
+            fixture_path.display()
         );
-        eprintln!("Run 'harness generate {}' to create it", fixture_path.display());
         process::exit(1);
     }
 
@@ -340,7 +336,10 @@ fn cmd_compare(args: &[String]) {
 fn find_fixtures() -> Vec<PathBuf> {
     let fixtures_dir = Path::new("tools/fixtures");
     if !fixtures_dir.exists() {
-        eprintln!("Error: fixtures directory not found: {}", fixtures_dir.display());
+        eprintln!(
+            "Error: fixtures directory not found: {}",
+            fixtures_dir.display()
+        );
         process::exit(1);
     }
 
