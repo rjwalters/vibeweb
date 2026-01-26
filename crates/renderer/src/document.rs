@@ -12,7 +12,7 @@ use vw_dom::NodeId as DomNodeId;
 use vw_layout::dom::{Document as LayoutDocument, NodeData as LayoutNodeData};
 use vw_layout::style::{ComputedStyle as LayoutComputedStyle, Display, Length, StyleTree};
 use vw_layout::NodeId as LayoutNodeId;
-use vw_style::tree::{compute_styles_default, NodeInfo};
+use vw_style::tree::NodeInfo;
 use vw_style::ComputedStyle as VwComputedStyle;
 use vw_style::Length as VwLength;
 
@@ -156,8 +156,11 @@ impl Document {
     fn compute_styles(
         &self,
         layout_doc: &LayoutDocument,
-        _node_mapping: &[(DomNodeId, LayoutNodeId)],
+        node_mapping: &[(DomNodeId, LayoutNodeId)],
     ) -> StyleTree {
+        use crate::author_matcher::AuthorStyleMatcher;
+        use vw_style::tree::StyleTreeBuilder;
+
         // Build NodeInfo list for vw-style
         let nodes: Vec<NodeInfo> = layout_doc
             .nodes()
@@ -178,9 +181,16 @@ impl Document {
             })
             .collect();
 
-        // Compute styles using default UA stylesheet + author stylesheet
-        // TODO: Wire up CSS selector matching to use self.stylesheet
-        let vw_style_tree = compute_styles_default(&nodes);
+        // Create node mapping in the format expected by AuthorStyleMatcher
+        let author_node_mapping: Vec<(DomNodeId, usize)> = node_mapping
+            .iter()
+            .map(|(dom_id, layout_id)| (*dom_id, layout_id.0))
+            .collect();
+
+        // Build the author style matcher and compute styles
+        let author_matcher = AuthorStyleMatcher::new(&self.stylesheet, &self.dom, &author_node_mapping);
+        let builder = StyleTreeBuilder::new(&author_matcher);
+        let vw_style_tree = builder.build(&nodes);
 
         // Convert vw-style's StyleTree to vw-layout's StyleTree
         let mut layout_style_tree = StyleTree::new();
@@ -333,3 +343,24 @@ mod tests {
         assert_eq!(render_tree.viewport_height(), 600);
     }
 }
+
+    #[test]
+    fn test_author_stylesheet_applied() {
+        // Create a document with an author stylesheet
+        let html = r#"<html><body><div class="red">Hello</div></body></html>"#;
+        let css = ".red { color: red; }";
+
+        let doc = Document::load(html, css).unwrap();
+
+        // Verify the stylesheet was parsed
+        assert!(!doc.stylesheet().rules.is_empty(), "Stylesheet should have rules");
+        assert_eq!(doc.stylesheet().rules.len(), 1, "Should have exactly one rule");
+
+        // Verify the rule selector
+        let rule = &doc.stylesheet().rules[0];
+        assert_eq!(rule.selectors.len(), 1, "Rule should have one selector");
+
+        // Verify the declaration
+        assert_eq!(rule.declarations.len(), 1, "Rule should have one declaration");
+        assert_eq!(rule.declarations[0].property, "color", "Declaration should be for color property");
+    }
