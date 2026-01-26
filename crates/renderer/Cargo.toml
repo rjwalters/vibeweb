@@ -12,4 +12,8 @@ vw-css = { path = "../css" }
 vw-style = { path = "../style" }
 vw-layout = { path = "../layout" }
 vw-gfx = { path = "../gfx" }
+vw-net = { path = "../net" }
+vw-tls = { path = "../tls" }
+vw-platform = { path = "../platform" }
+vw-image = { path = "../image" }
 thiserror.workspace = true
