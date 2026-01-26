@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "dom_compact": "#doc[<!DOCTYPE html>,<html>[<head>[,<title>[\"Minimal Test Page\"],],<body>[,<h1>[\"Hello, vibeweb!\"],,<p>[\"This is a minimal test fixture.\"],],],]",
+  "dom_tree": "#document\n  <!DOCTYPE html>\n  <html>\n    <head>\n      <title>\n        \"Minimal Test Page\"\n    <body>\n      <h1>\n        \"Hello, vibeweb!\"\n      <p>\n        \"This is a minimal test fixture.\"\n"
+}

@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "dom_compact": "#doc[<!DOCTYPE html>,<!--Purpose: Test single element with text content-->,<html>[<head>[,<title>[\"Single Element\"],],<body>[,<div>[\"Hello, world!\"],],],]",
+  "dom_tree": "#document\n  <!DOCTYPE html>\n  <!-- Purpose: Test single element with text content -->\n  <html>\n    <head>\n      <title>\n        \"Single Element\"\n    <body>\n      <div>\n        \"Hello, world!\"\n"
+}

@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "dom_compact": "#doc[<!DOCTYPE html>,<!--Purpose: Test mix of block and inline elements-->,<html>[<head>[,<title>[\"Block and Inline\"],],<body>[,<div>[\"This is a\",<span>[\"block\"],\"element with\",<strong>[\"inline\"],\"content.\"],,<p>[\"Another block element.\"],],],]",
+  "dom_tree": "#document\n  <!DOCTYPE html>\n  <!-- Purpose: Test mix of block and inline elements -->\n  <html>\n    <head>\n      <title>\n        \"Block and Inline\"\n    <body>\n      <div>\n        \"This is a\"\n        <span>\n          \"block\"\n        \"element with\"\n        <strong>\n          \"inline\"\n        \"content.\"\n      <p>\n        \"Another block element.\"\n"
+}

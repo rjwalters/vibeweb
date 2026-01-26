@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "dom_compact": "#doc[<!DOCTYPE html>,<!--Purpose: Test minimal empty document structure-->,<html>[<head>[,<title>[\"Empty Document\"],],<body>[],],]",
+  "dom_tree": "#document\n  <!DOCTYPE html>\n  <!-- Purpose: Test minimal empty document structure -->\n  <html>\n    <head>\n      <title>\n        \"Empty Document\"\n    <body>\n"
+}
