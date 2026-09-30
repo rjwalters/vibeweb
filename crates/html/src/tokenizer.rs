@@ -15,6 +15,8 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
+use crate::entity::decode_entities;
+
 /// An HTML token produced by the tokenizer.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
@@ -107,7 +109,7 @@ impl<'a> Tokenizer<'a> {
     fn parse_attribute_value(&mut self) -> String {
         self.skip_whitespace();
 
-        match self.peek() {
+        let value = match self.peek() {
             Some('"') => {
                 self.consume(); // consume opening quote
                 let value = self.consume_while(|c| c != '"');
@@ -125,7 +127,9 @@ impl<'a> Tokenizer<'a> {
                 self.consume_while(|c| !c.is_ascii_whitespace() && c != '>' && c != '/')
             }
             None => String::new(),
-        }
+        };
+
+        decode_entities(&value)
     }
 
     /// Parses attributes from a start tag.
@@ -271,7 +275,8 @@ impl<'a> Tokenizer<'a> {
     /// Parses text content.
     fn parse_text(&mut self) -> Token {
         let text = self.consume_while(|c| c != '<');
-        Token::Text(text)
+        let decoded = decode_entities(&text);
+        Token::Text(decoded)
     }
 }
 
